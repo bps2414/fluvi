@@ -129,6 +129,18 @@
 				<div class="label"><div class="t">Nitidez</div><div class="d">Aplicada depois de ajustar a imagem à sua tela</div></div>
 				<div class="stepper"><div class="arrow" data-dir="-1">‹</div><div class="value-wrap"><div class="value">{{ set.sharpness }}</div><div class="meter"><div class="fill" data-style-width="set.sharpness_pct + '%'"></div></div></div><div class="arrow" data-dir="1">›</div></div>
 			</div>
+			<div class="row" id="set-preset" data-setting="preset">
+				<div class="label"><div class="t">Qualidade da imagem</div><div class="d">Leve poupa a placa de vídeo. Máximo usa o melhor ampliador que ela aguentar.</div></div>
+				<div class="stepper"><div class="arrow" data-dir="-1">‹</div><div class="value">{{ set.preset }}</div><div class="arrow" data-dir="1">›</div></div>
+			</div>
+			<div class="row" id="set-upscaler" data-setting="upscaler">
+				<div class="label"><div class="t">Ampliação</div><div class="d">Só vale quando a tela é maior que o stream. Automática segue a qualidade.</div></div>
+				<div class="stepper"><div class="arrow" data-dir="-1">‹</div><div class="value">{{ set.upscaler }}</div><div class="arrow" data-dir="1">›</div></div>
+			</div>
+			<div class="row" id="set-newframes" data-setting="newframes">
+				<div class="label"><div class="t">Mostrar só quadros novos</div><div class="d">No modo Jogar, para usar com o Lossless Scaling</div></div>
+				<div class="switch" data-class-on="set.newframes_on"><div class="knob"></div></div>
+			</div>
 			<div class="row" id="set-fullscreen" data-setting="fullscreen">
 				<div class="label"><div class="t">Tela cheia</div><div class="d">Sem bordas, sem tirar o Windows do modo normal</div></div>
 				<div class="switch" data-class-on="set.fullscreen_on"><div class="knob"></div></div>

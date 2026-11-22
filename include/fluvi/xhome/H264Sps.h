@@ -11,6 +11,12 @@ namespace fluvi::xhome {
 struct H264SpsInfo {
     uint32_t width = 0, height = 0;   // after frame cropping
     uint8_t profileIdc = 0, levelIdc = 0;
+    // Additive (agent F, media): what a slice-header reader needs (frame_num width, colour planes).
+    uint32_t spsId = 0;
+    uint32_t log2MaxFrameNum = 4;            // frame_num is u(log2MaxFrameNum)
+    bool frameMbsOnly = true;
+    bool separateColourPlane = false;        // slices then carry colour_plane_id u(2)
+    bool gapsInFrameNumAllowed = false;
 };
 
 namespace detail {
@@ -52,12 +58,12 @@ inline bool parseH264Sps(const uint8_t* au, size_t size, H264SpsInfo* out) {
         info.profileIdc = uint8_t(r.bits(8));
         r.bits(8);                                   // constraint flags + reserved
         info.levelIdc = uint8_t(r.bits(8));
-        r.ue();                                      // seq_parameter_set_id
+        info.spsId = r.ue();                         // seq_parameter_set_id
         uint32_t chromaFormat = 1;
         switch (info.profileIdc) {
         case 100: case 110: case 122: case 244: case 44: case 83: case 86: case 118: case 128: case 138: case 139: case 134: case 135: {
             chromaFormat = r.ue();
-            if (chromaFormat == 3) r.bit();          // separate_colour_plane_flag
+            if (chromaFormat == 3) info.separateColourPlane = r.bit() != 0;
             r.ue(); r.ue(); r.bit();                 // bit depths, qpprime_y_zero_transform_bypass
             if (r.bit()) {                           // seq_scaling_matrix_present_flag
                 for (unsigned list = 0; list < (chromaFormat != 3 ? 8u : 12u); ++list) {
@@ -74,7 +80,7 @@ inline bool parseH264Sps(const uint8_t* au, size_t size, H264SpsInfo* out) {
         }
         default: break;
         }
-        r.ue();                                      // log2_max_frame_num_minus4
+        info.log2MaxFrameNum = r.ue() + 4;           // log2_max_frame_num_minus4
         const uint32_t pocType = r.ue();
         if (pocType == 0) r.ue();
         else if (pocType == 1) {
@@ -83,9 +89,10 @@ inline bool parseH264Sps(const uint8_t* au, size_t size, H264SpsInfo* out) {
             for (uint32_t j = 0; j < cycle && !r.bad(); ++j) r.se();
         }
         r.ue();                                      // max_num_ref_frames
-        r.bit();                                     // gaps_in_frame_num_value_allowed_flag
+        info.gapsInFrameNumAllowed = r.bit() != 0;   // gaps_in_frame_num_value_allowed_flag
         const uint32_t widthMbs = r.ue() + 1, heightMapUnits = r.ue() + 1;
         const uint32_t frameMbsOnly = r.bit();
+        info.frameMbsOnly = frameMbsOnly != 0;
         if (!frameMbsOnly) r.bit();                  // mb_adaptive_frame_field_flag
         r.bit();                                     // direct_8x8_inference_flag
         uint32_t cropL = 0, cropR = 0, cropT = 0, cropB = 0;

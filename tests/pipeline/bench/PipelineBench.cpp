@@ -4,6 +4,7 @@
 // timestamp timings per pass.
 //   fluvi_pipeline_bench --generate <out.png>            writes a procedural 2560x1440 test image
 //   fluvi_pipeline_bench <in.png> [--out W H] [--iters N] [--deblock S] [--sharp S] [--debug]
+//   fluvi_pipeline_bench --chain [--iters N] [--debug]   QualityChain timings for the standard stream/output pairs
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -18,6 +19,7 @@
 #include <wincodec.h>
 #include <wrl/client.h>
 
+#include "../ChainHarness.h"
 #include "../Images.h"
 #include "../TestGpu.h"
 #include "fluvi/gpu/Passes.h"
@@ -108,6 +110,66 @@ struct Timer {
     }
 };
 
+
+// Whole-chain GPU time for the standard (stream, output) pairs, EASU and FSR 4 on the upscale paths.
+int RunChainBench(uint32_t iters, bool debug) {
+    GpuOptions options;
+    options.debugLayer = debug;
+    TestGpu gpu(options);
+    if (!gpu.Valid()) { std::fprintf(stderr, "no D3D12 hardware adapter\n"); return 1; }
+    std::printf("adapter: %s\n", gpu.AdapterName().c_str());
+    struct Case { uint32_t sw, sh, ow, oh; };
+    const Case cases[] = {{1280, 720, 1920, 1080}, {2560, 1440, 1920, 1080}, {2560, 1440, 2560, 1440},
+                          {2560, 1440, 3840, 2160}, {2560, 1440, 3440, 1440}, {1920, 1080, 2560, 1600}};
+    Timer timer;
+    timer.Init(gpu.Device(), 2);
+    UINT64 f = 0;
+    gpu.Queue()->GetTimestampFrequency(&f);
+    const double freq = double(f);
+    std::printf("%-22s %-14s %-9s %-14s %9s %9s\n", "stream -> output", "path", "upscaler", "(fallback)", "avg ms", "best ms");
+    for (const Case& c : cases) {
+        for (Upscaler up : {Upscaler::Easu, Upscaler::Fsr4}) {
+            const ChainLayout probe = PlanLayout(c.sw, c.sh, c.ow, c.oh, up, true);
+            const bool upscale = probe.path == QualityPath::UpscaleFsr4 || probe.path == QualityPath::UpscaleEasu;
+            if (up == Upscaler::Fsr4 && !upscale) continue;   // same run as the EASU row
+            gpu.BeginTest();
+            TestAllocator alloc(gpu);
+            const Nv12Frame frame = RgbToNv12(Noise(c.sw, c.sh, 4, 40), YuvMatrix::Bt709, false);
+            Tex nv12 = gpu.CreateNv12(frame.w, frame.h);
+            gpu.UploadNv12(nv12, frame.y.data(), frame.uv.data());
+            Tex out = gpu.Create(c.ow, c.oh, kOutputFormat, true);
+            ChainOptions o;
+            o.config.upscaler = up;
+            o.config.deblock = 0.5f;
+            o.config.sharpness = 0.6f;
+            Status st;
+            auto chain = QualityChain::Create(gpu.Device(), alloc, o, st);
+            if (!chain || !chain->Configure(c.sw, c.sh, c.ow, c.oh).ok) { std::fprintf(stderr, "chain setup failed: %s\n", st.message.c_str()); return 1; }
+            double sum = 0, best = 1e9;
+            for (uint32_t it = 0; it < iters + 1; ++it) {   // first iteration is a warm-up
+                gpu.Run([&](ID3D12GraphicsCommandList* l) {
+                    gpu.Transition(l, out, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+                    timer.Mark(l, 0);
+                    chain->Record(l, nv12.gt, {}, out.gt);
+                    timer.Mark(l, 1);
+                    timer.Resolve(l);
+                });
+                if (it == 0) continue;
+                const auto t = timer.Read();
+                const double ms = double(t[1] - t[0]) * 1000.0 / freq;
+                sum += ms;
+                best = std::min(best, ms);
+            }
+            char label[48];
+            std::snprintf(label, sizeof label, "%ux%u -> %ux%u", c.sw, c.sh, c.ow, c.oh);
+            std::printf("%-22s %-14s %-9s %-14s %9.3f %9.3f\n", label, PathName(chain->Layout().path),
+                        chain->UpscalerName().empty() ? "-" : chain->UpscalerName().c_str(), chain->Fsr4Fallback().empty() ? "" : "fell back", sum / iters, best);
+            gpu.WaitIdle();
+        }
+    }
+    return 0;
+}
+
 } // namespace
 
 int wmain(int argc, wchar_t** argv) {
@@ -116,9 +178,10 @@ int wmain(int argc, wchar_t** argv) {
     std::wstring input;
     uint32_t outW = 1920, outH = 1080, iters = 20;
     float deblock = 0.5f, sharp = 0.3f;
-    bool debug = false;
+    bool debug = false, chainBench = false;
     for (int i = 1; i < argc; ++i) {
         const std::wstring a = argv[i];
+        if (a == L"--chain") { chainBench = true; continue; }
         if (a == L"--generate" && i + 1 < argc) {
             const bool ok = SavePng(argv[i + 1], GenerateTestImage());
             std::wprintf(L"%s %s\n", ok ? L"wrote" : L"FAILED to write", argv[i + 1]);
@@ -131,6 +194,7 @@ int wmain(int argc, wchar_t** argv) {
         else if (a == L"--debug") debug = true;
         else input = a;
     }
+    if (chainBench) return RunChainBench(iters, debug);
     if (input.empty()) { std::fprintf(stderr, "usage: fluvi_pipeline_bench <in.png> [--out W H] [--iters N] [--deblock S] [--sharp S] [--debug] | --generate <out.png>\n"); return 2; }
 
     Image src;

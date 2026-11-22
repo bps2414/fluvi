@@ -130,17 +130,30 @@ struct RcasPass::Impl { ComputeKernel k; };
 RcasPass::RcasPass() : impl_(std::make_unique<Impl>()) {}
 RcasPass::~RcasPass() = default;
 
-Status RcasPass::Init(ID3D12Device* device) { return impl_->k.Create(device, Spec("FsrRcas", g_FsrRcas, 4, 1, 1)); }
+Status RcasPass::Init(ID3D12Device* device) { return impl_->k.Create(device, Spec("FsrRcas", g_FsrRcas, 8, 1, 1)); }
 
-void RcasPass::Record(ID3D12GraphicsCommandList* list, const GpuTexture& in, const GpuTexture& out, float sharpness) {
+void RcasPass::Record(ID3D12GraphicsCommandList* list, const GpuTexture& in, const GpuTexture& out, float sharpness,
+                      const RcasPlacement* placement) {
     if (!Ok(impl_->k, "needs in.srv and out.uav", in.srv.ptr && out.uav.ptr)) return;
-    const uint32_t w = std::min(in.width, out.width), h = std::min(in.height, out.height);
+    uint32_t w = std::min(in.width, out.width), h = std::min(in.height, out.height);
+    int32_t offX = 0, offY = 0;
+    uint32_t outW = w, outH = h;
+    if (placement) {
+        w = in.width;
+        h = in.height;
+        offX = static_cast<int32_t>(placement->x);
+        offY = static_cast<int32_t>(placement->y);
+        outW = out.width;
+        outH = out.height;
+        if (!Ok(impl_->k, "placement outside the output", placement->x + w <= out.width && placement->y + h <= out.height)) return;
+    }
     if (!Ok(impl_->k, "empty image", w && h)) return;
     // RCAS' own scale is exp2(-stops); sharpness is that scale directly (stops = -log2(sharpness)), so 0 is a
     // true pass-through and 1 is the maximum (0 stops).
-    struct C { uint32_t w, h; float lobeScale; uint32_t pad; } c{w, h, std::clamp(sharpness, 0.f, 1.f), 0};
+    struct C { uint32_t w, h; float lobeScale; uint32_t pad; int32_t offX, offY; uint32_t outW, outH; } c{
+        w, h, std::clamp(sharpness, 0.f, 1.f), 0, offX, offY, outW, outH};
     impl_->k.Bind(list, &c, &in.srv, &out.uav);
-    list->Dispatch(Groups(w, kTile), Groups(h, kTile), 1);
+    list->Dispatch(Groups(outW, kTile), Groups(outH, kTile), 1);
 }
 
 } // namespace fluvi::gpu

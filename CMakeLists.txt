@@ -11,7 +11,7 @@ include(Fluvi)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
-# Which modules to configure. "all", or a ;-list of: gpu pipeline xhome input audio ui app.
+# Which modules to configure. "all", or a ;-list of: gpu pipeline xhome media input audio ui app.
 # Wave agents build only their own module so a half-done neighbour never breaks their configure:
 #   -DFLUVI_MODULES=gpu
 set(FLUVI_MODULES "all" CACHE STRING "Modules to configure")
@@ -33,6 +33,7 @@ target_include_directories(fluvi_core PUBLIC "${FLUVI_ROOT}/include")
 fluvi_module(gpu      src/gpu)           # agent A: gpu-core + present  -> fluvi_gpu
 fluvi_module(pipeline src/gpu/pipeline)  # agent E: passes + shaders    -> fluvi_pipeline
 fluvi_module(xhome    src/net/xhome)     # agent B: sign-in, session    -> fluvi_xhome
+fluvi_module(media    src/media)         # agent F: d3d12va decode      -> fluvi_media
 fluvi_module(input    src/input)         # agent D                      -> fluvi_input
 fluvi_module(audio    src/audio)         # agent D                      -> fluvi_audio
 fluvi_module(ui       src/ui)            # agent C: RmlUi               -> fluvi_ui

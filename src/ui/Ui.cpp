@@ -63,9 +63,9 @@ struct StreamVm {
 };
 
 struct SetVm {
-    Rml::String resolution, bitrate, mode, deblock, sharpness, strength, volume, hk_overlay, hk_mode, hk_full, hk_debug;
+    Rml::String resolution, bitrate, mode, deblock, sharpness, strength, volume, hk_overlay, hk_mode, hk_full, hk_debug, preset, upscaler;
     int deblock_pct = 0, sharpness_pct = 0, strength_pct = 0, volume_pct = 0;
-    bool fullscreen_on = false, switchhz_on = false, rumble_on = false, loaded = false;   // loaded: the app sent the settings
+    bool fullscreen_on = false, switchhz_on = false, rumble_on = false, newframes_on = false, loaded = false;   // loaded: the app sent the settings
 };
 
 // ---- Formatting (pt-BR: decimal comma) ----
@@ -106,6 +106,8 @@ const char* ResolutionName(StreamResolution r) {
 }
 
 const char* ModeName(StreamMode m) { return m == StreamMode::Smooth ? "Liso" : "Jogar"; }
+const char* PresetName(QualityPreset p) { return p == QualityPreset::Light ? "Leve" : p == QualityPreset::Max ? "Máximo" : "Padrão"; }
+const char* UpscalerName(UpscalerChoice u) { return u == UpscalerChoice::Easu ? "EASU" : u == UpscalerChoice::Fsr4 ? "FSR 4" : "Automática"; }
 
 std::string ShortUri(std::string uri) {
     for (const char* prefix : {"https://", "http://"})
@@ -551,6 +553,9 @@ bool UiImpl::BuildModel() {
         s.RegisterMember("sharpness_pct", &SetVm::sharpness_pct);
         s.RegisterMember("fullscreen_on", &SetVm::fullscreen_on);
         s.RegisterMember("switchhz_on", &SetVm::switchhz_on);
+        s.RegisterMember("preset", &SetVm::preset);
+        s.RegisterMember("upscaler", &SetVm::upscaler);
+        s.RegisterMember("newframes_on", &SetVm::newframes_on);
         s.RegisterMember("rumble_on", &SetVm::rumble_on);
         s.RegisterMember("loaded", &SetVm::loaded);
         s.RegisterMember("strength", &SetVm::strength);
@@ -988,6 +993,9 @@ void UiImpl::FillSettings() {
     set_.sharpness_pct = static_cast<int>(std::lround(s.video.sharpness * 100.0f));
     set_.fullscreen_on = s.video.fullscreen;
     set_.switchhz_on = s.video.switchRefreshInFullscreen;
+    set_.preset = PresetName(s.video.preset);
+    set_.upscaler = UpscalerName(s.video.upscaler);
+    set_.newframes_on = s.video.newFramesOnly;
     set_.rumble_on = s.controller.rumble;
     set_.strength = std::format("{}%", s.controller.rumbleStrength);
     set_.strength_pct = s.controller.rumbleStrength;
@@ -1028,6 +1036,13 @@ void UiImpl::StepSetting(const Rml::String& key, int dir, bool wrap) {
         v.fullscreen = wrap ? !v.fullscreen : dir > 0;
     } else if (key == "switchhz") {
         v.switchRefreshInFullscreen = wrap ? !v.switchRefreshInFullscreen : dir > 0;
+    } else if (key == "preset") {
+        v.preset = static_cast<QualityPreset>(step(static_cast<int>(v.preset), 3));
+        v.presetDetected = true;   // the user chose: DetectPreset() must not overwrite it
+    } else if (key == "upscaler") {
+        v.upscaler = static_cast<UpscalerChoice>(step(static_cast<int>(v.upscaler), 3));
+    } else if (key == "newframes") {
+        v.newFramesOnly = wrap ? !v.newFramesOnly : dir > 0;
     } else if (key == "rumble") {
         settings_.controller.rumble = wrap ? !settings_.controller.rumble : dir > 0;
     } else if (key == "strength") {

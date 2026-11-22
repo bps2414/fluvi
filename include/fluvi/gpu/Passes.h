@@ -78,13 +78,19 @@ private:
     struct Impl; std::unique_ptr<Impl> impl_;
 };
 
+// Where the RCAS image lands in a bigger output (agent G, wave 2).
+struct RcasPlacement { uint32_t x = 0, y = 0; };
+
 // FSR 1 RCAS (AMD, MIT): sharpening. sharpness 0..1 (0 = pass-through, 1 = max), mapped to RCAS stops.
+// Without `placement`: out gets min(in, out) pixels from the origin (as before). With it: the whole of `out` is
+// written, `in` sits at placement->x/y and everything around it is opaque black (bars, picture never stretched).
 class RcasPass {
 public:
     RcasPass();
     ~RcasPass();
     Status Init(ID3D12Device* device);
-    void Record(ID3D12GraphicsCommandList* list, const GpuTexture& in, const GpuTexture& out, float sharpness);
+    void Record(ID3D12GraphicsCommandList* list, const GpuTexture& in, const GpuTexture& out, float sharpness,
+                const RcasPlacement* placement = nullptr);
 private:
     struct Impl; std::unique_ptr<Impl> impl_;
 };
