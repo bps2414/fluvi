@@ -10,8 +10,9 @@ void DriftController::Reset() {
     fill_ = integral_ = ppm_ = 0;
 }
 
-double DriftController::Update(double fillMs, double dtSec) {
+double DriftController::Update(double fillMs, double dtSec, double msSinceArrival, double packetMs) {
     if (dtSec <= 0) return ppm_;
+    if (packetMs > 0) fillMs += std::clamp(msSinceArrival, 0.0, cfg_.maxArrivalAgeMs) - 0.5 * packetMs;
     if (!primed_) { fill_ = fillMs; primed_ = true; }
     fill_ += (fillMs - fill_) * (1.0 - std::exp(-dtSec / cfg_.lpfTauSec));
 

@@ -135,15 +135,20 @@ bool WebRtcSession::start(Signaling& signaling, const StreamConfig& config, std:
         sendMessageJson(json{{"type", "Handshake"}, {"version", "messageV1"}, {"id", "be0bfc6d-1e83-4c8a-90ed-fa8601c5a179"}, {"cv", "0"}}.dump());
     };
     // PR #1752 wraps the control channel's start(): as soon as it opens, before the message handshake,
-    // VideoPreference and userRequestedResolutionUpdate go out. Registered first so it precedes maybeHandshake.
-    control_->onOpen([this, gate = gate_] {
+    // VideoPreference and userRequestedResolutionUpdate go out. onOpen() keeps ONE callback per channel (a second
+    // registration replaces the first), so the control channel's callback runs this and then maybeHandshake.
+    const auto sendResolution = [this, gate = gate_] {
         std::lock_guard callbackLock(gate->mutex); if (!gate->open) return;
         if (resolutionSent_.exchange(true)) return;
         const bool sent = sendControl(videoPreferenceMessage(config_.width, config_.height)) &&
                           sendControl(userRequestedResolutionUpdateMessage(config_.height));
         FLUVI_INFO("xhome", "requested {}x{} on the control channel ({})", config_.width, config_.height, sent ? "sent" : "NOT sent");
+    };
+    for (const auto& dc : {chat_, input_, message_}) dc->onOpen(maybeHandshake);
+    control_->onOpen([sendResolution, maybeHandshake] {
+        sendResolution();
+        maybeHandshake();
     });
-    for (const auto& dc : {chat_, control_, input_, message_}) dc->onOpen(maybeHandshake);
     message_->onMessage([this, gate = gate_](rtc::message_variant data) {
         std::lock_guard callbackLock(gate->mutex); if (!gate->open) return;
         if (const auto* text = std::get_if<std::string>(&data)) onMessageChannel(*text);

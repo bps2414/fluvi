@@ -78,6 +78,7 @@ void FlowRefinePass::Record(ID3D12GraphicsCommandList* list, const GpuTexture& r
             rawFlow.srv.ptr && previous.srv.ptr && current.srv.ptr && refined.uav.ptr && rawFlow.width && rawFlow.height && refined.width && refined.height))
         return;
     if (!Ok(impl_->k, "hasReverseFlow needs reverseFlow", !params.hasReverseFlow || reverseFlow.srv.ptr)) return;
+    if (!Ok(impl_->k, "fidelityFlow needs sceneChanges (R32_UINT)", !params.fidelityFlow || sceneChanges.srv.ptr)) return;
     const uint32_t flags = (params.hasReverseFlow ? 1u : 0u) | (params.fidelityFlow ? 2u : 0u) | (params.fidelityWarmingUp ? 4u : 0u);
     const uint32_t c[8] = {rawFlow.width, rawFlow.height, refined.width, refined.height, std::max(1u, params.gridSize), Bits(params.tieBias), flags, 0};
     const D3D12_GPU_DESCRIPTOR_HANDLE srv[5] = {rawFlow.srv, previous.srv, current.srv, OrElse(reverseFlow, rawFlow.srv),

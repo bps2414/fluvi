@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // fluvi_gpu_demo: colour-cycling clear + a moving bar (tearing/judder visible), present stats in the title.
-// F11 toggles borderless fullscreen, Esc quits. Optional argument: seconds to run, then exit.
+// F11 toggles borderless fullscreen, Esc quits. Optional arguments: seconds to run, then exit; "fs" starts fullscreen.
 #include <windows.h>
 #include <shellapi.h>
 
@@ -48,6 +48,7 @@ const char* ModeName(PresentMode m) {
 
 int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR cmd, int) {
     const double runSeconds = cmd && *cmd ? _wtof(cmd) : 0;
+    g_toggle = cmd && wcsstr(cmd, L"fs") != nullptr;
     WNDCLASSEXW wc{sizeof(wc)};
     wc.lpfnWndProc = WndProc;
     wc.hInstance = inst;

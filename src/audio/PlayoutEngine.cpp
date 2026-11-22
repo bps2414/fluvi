@@ -2,6 +2,7 @@
 #include "PlayoutEngine.h"
 #include <opus/opus.h>
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include "fluvi/core/Log.h"
 
@@ -44,6 +45,11 @@ PlayoutEngine::~PlayoutEngine() {
     if (decoder_) opus_decoder_destroy(decoder_);
 }
 
+double PlayoutEngine::NowMs() const {
+    if (cfg_.nowMs) return cfg_.nowMs();
+    return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now().time_since_epoch()).count();
+}
+
 void PlayoutEngine::Push(const uint8_t* data, size_t size, uint32_t rtpTimestamp) {
     if (!data || size == 0) return;
     const int samples = opus_packet_get_nb_samples(data, static_cast<opus_int32>(size), static_cast<opus_int32>(cfg_.streamRate));
@@ -53,7 +59,11 @@ void PlayoutEngine::Push(const uint8_t* data, size_t size, uint32_t rtpTimestamp
         std::lock_guard lock(mutex_);
         r = jitter_.Insert(rtpTimestamp, data, size, static_cast<uint32_t>(samples));
     }
-    if (r == JitterBuffer::InsertResult::Accepted || r == JitterBuffer::InsertResult::AcceptedDroppedOldest) ++packets_;
+    if (r == JitterBuffer::InsertResult::Accepted || r == JitterBuffer::InsertResult::AcceptedDroppedOldest) {
+        ++packets_;
+        lastPacketMs_ = double(samples) / (cfg_.streamRate / 1000.0);
+        lastArrivalMs_ = NowMs();
+    }
     if (r == JitterBuffer::InsertResult::AcceptedDroppedOldest) ++overflow_;
 }
 
@@ -148,7 +158,9 @@ void PlayoutEngine::Render(float* out, size_t frames, uint32_t outRate) {
 
     // Drift correction: small ratio change keeps the fill around the target.
     double fill = fillMs();
-    double ppm = cfg_.driftCorrection ? drift_.Update(fill, double(frames) / outRate) : 0.0;
+    const double lastArrival = lastArrivalMs_.load();
+    const double age = lastArrival < 0 ? 0.0 : std::max(0.0, NowMs() - lastArrival);
+    double ppm = cfg_.driftCorrection ? drift_.Update(fill, double(frames) / outRate, age, lastPacketMs_.load()) : 0.0;
     resampler_.SetRatio(double(cfg_.streamRate) / double(outRate) * (1.0 + ppm * 1e-6));
 
     // Overflow: far above the target (a burst after a stall): drop the oldest packets, fade around the cut.

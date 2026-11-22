@@ -154,7 +154,7 @@ int wmain(int argc, wchar_t** argv) {
     Tex nv12 = gpu.CreateNv12(frame.w, frame.h);
     gpu.UploadNv12(nv12, frame.y.data(), frame.uv.data());
     Tex rgb = gpu.Create(frame.w, frame.h, kIntermediateFormat, true), deb = gpu.Create(frame.w, frame.h, kIntermediateFormat, true);
-    Tex small = gpu.Create(outW, outH, kIntermediateFormat, true), fin = gpu.Create(outW, outH, kOutputFormat, true);
+    Tex scaled = gpu.Create(outW, outH, kIntermediateFormat, true), fin = gpu.Create(outW, outH, kOutputFormat, true);
 
     Timer timer;
     timer.Init(gpu.Device(), 5);
@@ -170,13 +170,13 @@ int wmain(int argc, wchar_t** argv) {
         TestGpu::UavBarrier(l, deb);
         gpu.Transition(l, deb, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
         timer.Mark(l, 2);
-        gpu.Transition(l, small, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-        ds.Record(l, deb.gt, small.gt, DownscaleFilter::Lanczos3);
-        TestGpu::UavBarrier(l, small);
-        gpu.Transition(l, small, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
+        gpu.Transition(l, scaled, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+        ds.Record(l, deb.gt, scaled.gt, DownscaleFilter::Lanczos3);
+        TestGpu::UavBarrier(l, scaled);
+        gpu.Transition(l, scaled, D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE);
         timer.Mark(l, 3);
         gpu.Transition(l, fin, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
-        rc.Record(l, small.gt, fin.gt, sharp);
+        rc.Record(l, scaled.gt, fin.gt, sharp);
         TestGpu::UavBarrier(l, fin);
         timer.Mark(l, 4);
         timer.Resolve(l);
@@ -202,7 +202,7 @@ int wmain(int argc, wchar_t** argv) {
 
     const std::filesystem::path base = std::filesystem::path(input).replace_extension();
     struct Stage { const char* suffix; Tex* tex; };
-    for (const Stage& s : {Stage{"_1_nv12_rgb", &rgb}, Stage{"_2_deblock", &deb}, Stage{"_3_downscale", &small}, Stage{"_4_rcas", &fin}}) {
+    for (const Stage& s : {Stage{"_1_nv12_rgb", &rgb}, Stage{"_2_deblock", &deb}, Stage{"_3_downscale", &scaled}, Stage{"_4_rcas", &fin}}) {
         const std::wstring path = base.wstring() + std::wstring(s.suffix, s.suffix + std::strlen(s.suffix)) + L".png";
         std::wprintf(L"%s %s\n", SavePng(path, Download(gpu, *s.tex)) ? L"wrote" : L"FAILED", path.c_str());
     }

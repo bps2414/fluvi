@@ -60,7 +60,8 @@ struct FlowRefineParams {
 //   rawFlow     : srv, R16G16_SINT, grid extent (size of the raw flow texture)
 //   previous    : srv, float-sampled colour (RGBA8/RGBA16F), flow extent      current: same
 //   reverseFlow : srv, R16G16_SINT, grid extent; optional (only read when params.hasReverseFlow)
-//   sceneChanges: srv, R32_UINT; optional (FidelityFX scene-change history; only read when params.fidelityFlow)
+//   sceneChanges: srv, R32_UINT; required when params.fidelityFlow (FidelityFX scene-change history, entry (1,0)
+//                 low 4 bits != 0 zeroes the output), unused (may be default) otherwise
 //   refined     : uav, R16G16B16A16_FLOAT, flow extent: xy vector (current->previous, flow pixels), z best cost,
 //                 w disagreement
 // Dispatch ceil(refined.w/16) x ceil(refined.h/16). Constants: gridW, gridH, flowW, flowH, gridSize, tieBias,

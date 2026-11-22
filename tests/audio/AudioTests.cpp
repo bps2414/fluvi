@@ -3,6 +3,7 @@
 // PLC/FEC, drift correction) driven by simulated clocks.
 #include <doctest/doctest.h>
 #include <algorithm>
+#include <functional>
 #include <cmath>
 #include <numeric>
 #include "DriftController.h"
@@ -34,8 +35,9 @@ std::vector<float> RunEngine(PlayoutEngine& e, const std::vector<std::pair<uint3
     return out;
 }
 
-std::unique_ptr<PlayoutEngine> MakeEngine(uint32_t targetMs, bool drift = false) {
+std::unique_ptr<PlayoutEngine> MakeEngine(uint32_t targetMs, bool drift = false, std::function<double()> clock = {}) {
     PlayoutConfig cfg;
+    cfg.nowMs = std::move(clock);
     cfg.targetBufferMs = targetMs;
     cfg.driftCorrection = drift;
     Status st;
@@ -207,7 +209,9 @@ TEST_CASE("DriftResampler: slowly changing ratio does not click") {
         const size_t n = r.Read(out.data(), 480);
         all.insert(all.end(), out.begin(), out.begin() + n * 2);
     }
-    CHECK(MaxJump(all, 0, all.size() / 2) < 0.03);          // 440 Hz slope is 0.029/sample
+    // The steepest slope of a 440 Hz unit sine is 2*pi*440/48000 = 0.0576/sample (x1.005 at the largest ratio),
+    // so 0.0585 is the smooth-signal ceiling; a phase jump or a bad interpolation at a ratio change exceeds it.
+    CHECK(MaxJump(all, 0, all.size() / 2) < 0.0585);
 }
 
 // ---------------------------------------------------------------- DriftController
@@ -219,14 +223,14 @@ struct DriftSim { double finalPpm, meanFill, minFill, maxFill; };
 DriftSim SimulateDrift(double ppmOff, double seconds = 180.0) {
     DriftController c;
     const double dt = 0.005;
-    double fill = 30, producer = 0, nextPacket = 20, ppm = 0;
+    double fill = 30, producer = 0, nextPacket = 20, ppm = 0, lastArrival = 0;
     double sum = 0, mn = 1e9, mx = -1e9;
     int count = 0;
     for (double t = 0; t < seconds; t += dt) {
         producer += dt * 1000.0 * (1.0 + ppmOff * 1e-6);
-        while (producer >= nextPacket) { fill += 20; nextPacket += 20; }
+        while (producer >= nextPacket) { fill += 20; lastArrival = t - (producer - nextPacket) / 1000.0; nextPacket += 20; }   // exact arrival instant, not the step end
         fill -= dt * 1000.0 * (1.0 + ppm * 1e-6);
-        ppm = c.Update(fill, dt);
+        ppm = c.Update(fill, dt, (t - lastArrival) * 1000.0, 20.0);
         if (t > seconds - 20) { sum += fill; mn = std::min(mn, fill); mx = std::max(mx, fill); ++count; }
     }
     return {ppm, sum / count, mn, mx};
@@ -421,7 +425,8 @@ struct ClockSim { AudioStats stats; double meanFill = 0, minFill = 1e9, maxFill 
 // Producer clock off by ppmOff (a faster sender has positive ppm); 10 ms render blocks on the exact clock;
 // packets arrive with 0..6 ms of jitter.
 ClockSim SimulateClockMismatch(const OpusStream& s, double ppmOff, double seconds) {
-    auto e = MakeEngine(30, /*drift=*/true);
+    double simNow = 0;   // ms; Push() is stamped with the packet's arrival time, Render() with the block start
+    auto e = MakeEngine(30, /*drift=*/true, [&simNow] { return simNow; });
     ClockSim r;
     uint32_t lcg = 12345;
     struct Arrival { double at; size_t index; };
@@ -442,9 +447,11 @@ ClockSim SimulateClockMismatch(const OpusStream& s, double ppmOff, double second
         std::sort(pending.begin(), pending.end(), [](auto& x, auto& y) { return x.at < y.at; });
         while (!pending.empty() && pending.front().at <= now) {
             const size_t i = pending.front().index;
+            simNow = pending.front().at;
             e->Push(s.packets[i % s.packets.size()].data(), s.packets[i % s.packets.size()].size(), uint32_t(i * kFrame));
             pending.erase(pending.begin());
         }
+        simNow = now;
         e->Render(out.data(), 480, 48000);
         if (b > blocks - 2000) {
             const double f = e->Stats().bufferedMs;
@@ -468,7 +475,10 @@ TEST_CASE("PlayoutEngine: simulated +-300 ppm clock mismatch, no underruns or dr
         CHECK(r.stats.overflowDrops == 0);
         CHECK(r.stats.lostPackets == 0);
         CHECK(r.stats.driftPpm == doctest::Approx(off).epsilon(0.25));
-        CHECK(std::fabs(r.meanFill - 30.0) < 6.0);
+        // The controller holds the fill at 30 ms (sawtooth mean) when Render() starts. Stats().bufferedMs is read
+        // after the block was drained (-10 ms) and before the next block's arrivals are pushed (this simulation
+        // pushes them at the block start), so its mean is 30 - 10 = 20 ms.
+        CHECK(std::fabs(r.meanFill - 20.0) < 6.0);
         CHECK(r.minFill > 3.0);
     }
 }

@@ -553,8 +553,9 @@ TEST_CASE("account: device-code sign-in, token chain, refresh and expiry") {
         Account account(http, file);
         account.setClock([&] { return now; });
         CHECK(account.signedIn());   // survives a restart
-        http->add("user.auth.xboxlive.com", "/user/authenticate", 200, R"({"Token":"UT","NotAfter":"2027-01-01T00:00:00.0000000Z","DisplayClaims":{"xui":[{"uhs":"123"}]}})");
-        http->add("xsts.auth.xboxlive.com", "/xsts/authorize", 200, R"({"Token":"GSSV","NotAfter":"2027-01-01T00:00:00Z","DisplayClaims":{"xui":[{"uhs":"123"}]}})");
+        // NotAfter must be after the fake clock (1.8e9 = 2027-01-15): an already-expired token is refetched, not reused
+        http->add("user.auth.xboxlive.com", "/user/authenticate", 200, R"({"Token":"UT","NotAfter":"2030-01-01T00:00:00.0000000Z","DisplayClaims":{"xui":[{"uhs":"123"}]}})");
+        http->add("xsts.auth.xboxlive.com", "/xsts/authorize", 200, R"({"Token":"GSSV","NotAfter":"2030-01-01T00:00:00Z","DisplayClaims":{"xui":[{"uhs":"123"}]}})");
         http->add("xhome.gssv-play-prod.xboxlive.com", "/v2/login/user", 200,
                   R"({"offeringSettings":{"regions":[{"name":"WestEurope","baseUri":"https://weu.core.gssv-play-prodxhome.xboxlive.com","isDefault":false},{"name":"EastAsia","baseUri":"https://eas.core.gssv-play-prodxhome.xboxlive.com/","isDefault":true}]},"market":"CN","gsToken":"GS","tokenType":"bearer","durationInSeconds":14400})");
         const StreamingAccess access = account.streamingAccess();
@@ -574,7 +575,7 @@ TEST_CASE("account: device-code sign-in, token chain, refresh and expiry") {
         CHECK(http->seen.size() == before);   // a valid streaming token is reused
 
         // the web authorization for wake: another XSTS for http://xboxlive.com, built on the cached user token
-        http->add("xsts.auth.xboxlive.com", "/xsts/authorize", 200, R"({"Token":"WEBXSTS","NotAfter":"2027-01-01T00:00:00Z","DisplayClaims":{"xui":[{"uhs":"123"}]}})");
+        http->add("xsts.auth.xboxlive.com", "/xsts/authorize", 200, R"({"Token":"WEBXSTS","NotAfter":"2030-01-01T00:00:00Z","DisplayClaims":{"xui":[{"uhs":"123"}]}})");
         CHECK(account.webAuthorization() == "XBL3.0 x=123;WEBXSTS");
         const json web = json::parse(http->seen.back().body);
         CHECK(web["RelyingParty"] == "http://xboxlive.com");

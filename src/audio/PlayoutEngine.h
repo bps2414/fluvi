@@ -5,6 +5,7 @@
 #pragma once
 #include <atomic>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <vector>
@@ -23,6 +24,7 @@ struct PlayoutConfig {
     uint32_t targetBufferMs = 30;
     bool driftCorrection = true;       // tests turn it off for bit-exact checks
     size_t maxPackets = 64;
+    std::function<double()> nowMs;     // monotonic clock in ms for packet arrival times; null = steady_clock (tests inject a simulated one)
 };
 
 class PlayoutEngine {
@@ -41,6 +43,7 @@ private:
     PlayoutEngine() = default;
     bool DecodeOne();
     void ApplyFlush();
+    double NowMs() const;
     void Discontinuity();              // fade the pending tail out and the next decoded audio in
 
     PlayoutConfig cfg_;
@@ -62,6 +65,7 @@ private:
 
     std::atomic<float> volume_{1.0f};
     std::atomic<bool> flush_{false};
+    std::atomic<double> lastArrivalMs_{-1.0}, lastPacketMs_{0.0};   // Push() time of the latest accepted packet
 
     // stats
     std::atomic<uint64_t> packets_{0}, lost_{0}, concealed_{0}, underruns_{0}, overflow_{0};

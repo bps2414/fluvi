@@ -21,7 +21,7 @@ struct TestGpu::Impl {
 };
 
 namespace {
-D3D12_HEAP_PROPERTIES Heap(D3D12_HEAP_TYPE t) {
+D3D12_HEAP_PROPERTIES HeapProps(D3D12_HEAP_TYPE t) {
     D3D12_HEAP_PROPERTIES h{};
     h.Type = t;
     return h;
@@ -103,8 +103,9 @@ TestGpu::~TestGpu() {
 TestGpu& TestGpu::Shared() {
     static TestGpu gpu([] {
         GpuOptions o;
-        const char* gbv = std::getenv("FLUVI_TEST_GBV");
-        o.gpuValidation = !(gbv && gbv[0] == '0');
+        char gbv[8] = {}; size_t gbvLen = 0;
+        getenv_s(&gbvLen, gbv, sizeof gbv, "FLUVI_TEST_GBV");
+        o.gpuValidation = !(gbvLen > 0 && gbv[0] == '0');
         return o;
     }());
     return gpu;
@@ -162,7 +163,7 @@ Tex TestGpu::Create(uint32_t w, uint32_t h, DXGI_FORMAT format, bool uav) {
     d.Format = format;
     d.SampleDesc.Count = 1;
     d.Flags = uav ? D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS : D3D12_RESOURCE_FLAG_NONE;
-    const auto heap = Heap(D3D12_HEAP_TYPE_DEFAULT);
+    const auto heap = HeapProps(D3D12_HEAP_TYPE_DEFAULT);
     if (FAILED(device_->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &d, D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS(&t.res)))) return t;
     t.gt.resource = t.res.Get();
     t.gt.format = format;
@@ -199,7 +200,7 @@ Tex TestGpu::CreateNv12(uint32_t w, uint32_t h) {
     d.MipLevels = 1;
     d.Format = DXGI_FORMAT_NV12;
     d.SampleDesc.Count = 1;
-    const auto heap = Heap(D3D12_HEAP_TYPE_DEFAULT);
+    const auto heap = HeapProps(D3D12_HEAP_TYPE_DEFAULT);
     if (FAILED(device_->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &d, D3D12_RESOURCE_STATE_COMMON, nullptr, IID_PPV_ARGS(&t.res)))) return t;
     t.gt.resource = t.res.Get();
     t.gt.format = DXGI_FORMAT_NV12;
@@ -246,7 +247,7 @@ void TestGpu::Upload(Tex& t, const void* data, size_t rowBytes) {
     UINT64 rowSize = 0, total = 0;
     device_->GetCopyableFootprints(&desc, 0, 1, 0, &fp, &rows, &rowSize, &total);
     ComPtr<ID3D12Resource> up;
-    const auto heap = Heap(D3D12_HEAP_TYPE_UPLOAD);
+    const auto heap = HeapProps(D3D12_HEAP_TYPE_UPLOAD);
     const auto bd = BufferDesc(total);
     device_->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &bd, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&up));
     uint8_t* p = nullptr;
@@ -274,7 +275,7 @@ void TestGpu::UploadNv12(Tex& t, const uint8_t* luma, const uint8_t* chroma) {
     UINT64 rowSize[2]{}, total = 0;
     device_->GetCopyableFootprints(&desc, 0, 2, 0, fp, rows, rowSize, &total);
     ComPtr<ID3D12Resource> up;
-    const auto heap = Heap(D3D12_HEAP_TYPE_UPLOAD);
+    const auto heap = HeapProps(D3D12_HEAP_TYPE_UPLOAD);
     const auto bd = BufferDesc(total);
     device_->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &bd, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&up));
     uint8_t* p = nullptr;
@@ -307,7 +308,7 @@ std::vector<uint8_t> TestGpu::Readback(Tex& t) {
     UINT64 rowSize = 0, total = 0;
     device_->GetCopyableFootprints(&desc, 0, 1, 0, &fp, &rows, &rowSize, &total);
     ComPtr<ID3D12Resource> rb;
-    const auto heap = Heap(D3D12_HEAP_TYPE_READBACK);
+    const auto heap = HeapProps(D3D12_HEAP_TYPE_READBACK);
     const auto bd = BufferDesc(total);
     device_->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &bd, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&rb));
     const auto before = t.state;
@@ -333,12 +334,12 @@ std::vector<uint8_t> TestGpu::Readback(Tex& t) {
 
 ComPtr<ID3D12Resource> TestGpu::CreateResultBuffer(uint64_t bytes) {
     ComPtr<ID3D12Resource> buf;
-    const auto heap = Heap(D3D12_HEAP_TYPE_DEFAULT);
+    const auto heap = HeapProps(D3D12_HEAP_TYPE_DEFAULT);
     const auto bd = BufferDesc(bytes, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS);
     device_->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &bd, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, nullptr, IID_PPV_ARGS(&buf));
     // Zero it with a copy from a zeroed upload buffer.
     ComPtr<ID3D12Resource> up;
-    const auto uh = Heap(D3D12_HEAP_TYPE_UPLOAD);
+    const auto uh = HeapProps(D3D12_HEAP_TYPE_UPLOAD);
     const auto ud = BufferDesc(bytes);
     device_->CreateCommittedResource(&uh, D3D12_HEAP_FLAG_NONE, &ud, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr, IID_PPV_ARGS(&up));
     void* p = nullptr;
@@ -362,7 +363,7 @@ ComPtr<ID3D12Resource> TestGpu::CreateResultBuffer(uint64_t bytes) {
 
 std::vector<uint8_t> TestGpu::ReadbackBuffer(ID3D12Resource* buffer, uint64_t bytes, D3D12_RESOURCE_STATES current) {
     ComPtr<ID3D12Resource> rb;
-    const auto heap = Heap(D3D12_HEAP_TYPE_READBACK);
+    const auto heap = HeapProps(D3D12_HEAP_TYPE_READBACK);
     const auto bd = BufferDesc(bytes);
     device_->CreateCommittedResource(&heap, D3D12_HEAP_FLAG_NONE, &bd, D3D12_RESOURCE_STATE_COPY_DEST, nullptr, IID_PPV_ARGS(&rb));
     Run([&](ID3D12GraphicsCommandList* l) {
