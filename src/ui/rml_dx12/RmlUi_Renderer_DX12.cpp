@@ -1,7 +1,7 @@
 // RmlUi 6.3 DirectX 12 renderer (MIT, see LICENSE.txt next to this file), adapted for Fluvi:
 // external device + direct queue, no swapchain/present; records into the caller's command list on top of its target,
 // the target is copied into the base layer so backdrop-filter sees it; per-frame constant-buffer ring fenced on the caller's queue.
-﻿#include "RmlUi_Renderer_DX12.h"
+#include "RmlUi_Renderer_DX12.h"
 #include <RmlUi/Core/Core.h>
 #include <RmlUi/Core/DecorationTypes.h>
 #include <RmlUi/Core/FileInterface.h>
@@ -10,6 +10,7 @@
 #include <RmlUi/Core/MeshUtilities.h>
 #include <RmlUi/Core/Platform.h>
 #include <RmlUi/Core/Profiling.h>
+#include <RmlUi/Core/SystemInterface.h>
 #include <algorithm>
 #include <string.h>
 
@@ -8365,7 +8366,13 @@ void RenderInterface_DX12::TextureMemoryManager::Alloc_As_Placed(size_t base_mem
 		desc.Alignment = D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT;
 		info_for_alloc = m_p_device->GetResourceAllocationInfo(0, 1, &desc);
 
-		RMLUI_ASSERTMSG(info_for_alloc.Alignment == D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT, "wrong calculation! check CanBeSmallResource method!");
+		// Fluvi: the driver may refuse 4 KB alignment (e.g. textures that need more than 16 tiles); it then returns
+		// SizeInBytes = UINT64_MAX. Fall back to the default 64 KB alignment instead of failing the allocation.
+		if (info_for_alloc.Alignment != D3D12_SMALL_RESOURCE_PLACEMENT_ALIGNMENT || info_for_alloc.SizeInBytes == UINT64_MAX)
+		{
+			desc.Alignment = 0;
+			info_for_alloc = m_p_device->GetResourceAllocationInfo(0, 1, &desc);
+		}
 
 #ifdef RMLUI_DX_DEBUG
 		if (total_memory != info_for_alloc.SizeInBytes)

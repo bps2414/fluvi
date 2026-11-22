@@ -4,171 +4,154 @@
 	<title>Consoles</title>
 	<link type="text/rcss" href="theme.rcss"/>
 	<style>
+		/* Layout only: values come from theme.rcss tokens. */
 		.account
 		{
 			display: flex;
 			flex-direction: row;
 			align-items: center;
 			gap: var(--s3);
-			padding: 6dp 18dp 6dp 6dp;
+			margin-left: var(--s3);
+			padding: var(--s1h) var(--s5) var(--s1h) var(--s1h);
 			border-radius: var(--r-pill);
-			background-color: var(--surface);
-			border: 1dp var(--line);
+			background-color: var(--water);
 			font-size: var(--t-sm);
 			font-weight: 600;
 		}
 		.avatar
 		{
-			width: 36dp; height: 36dp; border-radius: 18dp;
-			line-height: 36dp; text-align: center;
+			width: 38dp; height: 38dp; border-radius: var(--r-pill);
+			line-height: 38dp; text-align: center;
 			font-weight: bold;
-			color: var(--accent-ink);
-			decorator: linear-gradient(135deg, var(--accent-strong), var(--accent));
+			color: var(--brand-ink);
+			decorator: linear-gradient(150deg, var(--brand-hi), var(--brand-deep));
 		}
+		.account-skeleton { margin-left: var(--s3); width: 180dp; }
 
-		.page { position: absolute; top: 140dp; left: 0dp; right: 0dp; bottom: 0dp; padding: 0dp var(--s8); }
+		.page { position: absolute; top: 200dp; left: var(--margin); right: var(--margin); bottom: 0dp; }
 		.heading { display: flex; flex-direction: row; align-items: flex-end; justify-content: space-between; }
-		.heading .sub { margin-top: var(--s2); color: var(--text-2); font-size: var(--t-md); }
-		.banner
-		{
-			margin-top: var(--s5);
-			padding: var(--s4) var(--s5);
-			border-radius: var(--r-md);
-			background-color: var(--danger-soft);
-			color: var(--danger);
-			font-weight: 600;
-		}
+		.heading .lead { margin-top: var(--s3); }
+		.searching { display: flex; flex-direction: row; align-items: center; gap: var(--s3); color: var(--bank); font-size: var(--t-sm); padding-bottom: var(--s1h); }
+		.page .notice { margin-top: var(--s5); width: 960dp; }
 
-		.grid { margin-top: var(--s7); display: flex; flex-direction: row; flex-wrap: wrap; gap: var(--s5); }
+		.shelf { margin-top: var(--s8); display: flex; flex-direction: row; flex-wrap: wrap; gap: var(--s5); }
+		.tile-size { width: 400dp; height: 300dp; }
 
-		.card
+		/* One tile per console: the room name is what people recognise, so it is the largest thing on it. */
+		.tile
 		{
 			position: relative;
-			width: 420dp;
-			height: 300dp;
 			box-sizing: border-box;
-			padding: var(--s5);
-			border-radius: var(--r-lg);
-			background-color: var(--surface);
-			border: 1.5dp var(--line);
+			padding: var(--s6) var(--s6) var(--s5) var(--s6);
+			border-radius: var(--r-tile);
+			background-color: var(--tile);
+			border: 2dp var(--line);
 			display: flex;
 			flex-direction: column;
 			justify-content: space-between;
-			transition: background-color border-color transform 0.18s cubic-out;
-			nav: auto;
+			transition: background-color border-color transform var(--d-fast) cubic-out;
 		}
-		.card:hover { background-color: var(--surface-hi); }
-		.card:focus-visible
+		.tile:hover { background-color: var(--tile-hi); }
+		.tile:focus-visible
 		{
-			border-color: var(--accent);
-			background-color: var(--surface-hi);
-			transform: scale(1.03);
-			box-shadow: #3fd9c840 0dp 0dp 0dp 4dp, #00000080 0dp 24dp 48dp 0dp;
+			border-color: var(--brand);
+			background-color: var(--tile-hi);
+			transform: translateY(-6dp);
+			box-shadow: var(--shadow-tile);
 		}
-		.card .glyph
-		{
-			width: 64dp; height: 64dp;
-			border-radius: 16dp;
-			background-color: #ffffff10;
-			border: 1dp var(--line);
-		}
-		.card.on .glyph { decorator: radial-gradient(circle 40dp at 50% 50%, #3fd9c855, #3fd9c800); border-color: #3fd9c866; }
-		.card .glyph .bar
-		{
-			margin: 22dp auto 0dp auto;
-			width: 28dp; height: 20dp;
-			border-radius: 4dp;
-			border: 2dp var(--text-2);
-		}
-		.card.on .glyph .bar { border-color: var(--accent); }
-		.card .name { font-size: var(--t-lg); font-weight: 600; margin-top: var(--s4); }
-		.card .type { font-size: var(--t-sm); color: var(--text-2); margin-top: 2dp; }
-		.pill
-		{
-			position: absolute; top: var(--s5); right: var(--s5);
-			display: flex; flex-direction: row; align-items: center; gap: 8dp;
-			padding: 6dp 14dp;
-			border-radius: var(--r-pill);
-			font-size: var(--t-xs); font-weight: 600;
-			background-color: var(--surface-hi);
-			color: var(--text-2);
-		}
-		.pill .led { width: 8dp; height: 8dp; border-radius: 4dp; background-color: var(--text-3); }
-		.pill.on { color: var(--accent); background-color: var(--accent-soft); }
-		.pill.on .led { background-color: var(--accent); box-shadow: #3fd9c8 0dp 0dp 8dp 0dp; }
-		.card .actions { display: flex; flex-direction: row; gap: var(--s3); align-items: center; }
+		.tile.busy { opacity: 0.85; }
+
+		.state { display: flex; flex-direction: row; align-items: center; gap: var(--s2h); font-size: var(--t-sm); font-weight: 600; color: var(--silt); }
+		.tile.on .state { color: var(--alive); }
+		.tile .name { font-size: var(--t-display); }
+		.tile .model { margin-top: var(--s1h); font-size: var(--t-sm); color: var(--bank); }
+
+		.go { display: flex; flex-direction: row; align-items: center; justify-content: space-between; }
 		.cta
 		{
-			height: 44dp; line-height: 44dp; padding: 0dp 22dp;
+			height: 46dp; line-height: 46dp; padding: 0dp var(--s5);
 			border-radius: var(--r-pill);
 			font-size: var(--t-sm); font-weight: 600;
-			background-color: var(--surface-hi);
-			color: var(--text);
-			transition: background-color color 0.18s cubic-out;
+			background-color: var(--water-hi);
+			color: var(--foam);
+			transition: background-color color var(--d-fast) cubic-out;
 		}
-		.card.on .cta, .card:focus-visible .cta { background-color: var(--accent); color: var(--accent-ink); }
-		.busy { display: flex; flex-direction: row; align-items: center; gap: var(--s3); color: var(--text-2); font-size: var(--t-sm); }
+		.tile:focus-visible .cta, .tile:hover .cta { background-color: var(--brand); color: var(--brand-ink); }
+		.waiting { display: flex; flex-direction: row; align-items: center; gap: var(--s3); color: var(--bank); font-size: var(--t-sm); }
 
-		.empty
-		{
-			margin-top: var(--s8);
-			width: 640dp;
-			color: var(--text-2);
-			font-size: var(--t-md);
-			line-height: 1.5em;
-		}
-		.footer-hint { position: absolute; bottom: var(--s6); left: var(--s8); color: var(--text-3); font-size: var(--t-xs); }
+
+		.empty { margin-top: var(--s8); width: 720dp; }
+		.empty h2 { margin-bottom: var(--s3); }
+		.empty .muted { line-height: 1.5; }
 	</style>
 </head>
 <body class="solid" data-model="fluvi">
 	<div class="topbar">
-		<div class="wordmark">Fluvi<span class="dot">.</span></div>
+		<div class="brand">
+			<div class="brand-mark"><div class="w w1"></div><div class="w w2"></div><div class="w w3"></div></div>
+			<div class="brand-name">Fluvi</div>
+		</div>
 		<div class="right">
-			<button class="ghost" id="consoles-refresh" data-event-click="refresh_consoles" data-class-disabled="cons.refreshing">
-				<span data-if="!cons.refreshing">Atualizar</span><span data-if="cons.refreshing">Atualizando…</span>
-			</button>
+			<button class="ghost" id="consoles-refresh" data-event-click="refresh_consoles" data-class-disabled="cons.refreshing">Atualizar lista</button>
 			<button class="ghost" id="consoles-settings" data-event-click="open_settings">Configurações</button>
+			<button class="ghost" id="consoles-signout" data-event-click="sign_out">Sair da conta</button>
 			<div class="account" data-if="cons.has_account">
 				<div class="avatar">{{ cons.initial }}</div>
 				<span>{{ cons.account }}</span>
 			</div>
-			<button class="ghost" id="consoles-signout" data-event-click="sign_out">Sair da conta</button>
+			<div class="skeleton-line chip account-skeleton" data-if="!cons.has_account &amp;&amp; (cons.loading || cons.refreshing)"></div>
 		</div>
 	</div>
 
-	<div class="page enter">
+	<div class="page arrive">
 		<div class="heading">
 			<div>
-				<div class="eyebrow">SEUS CONSOLES</div>
-				<h1>Escolha um console</h1>
-				<div class="sub">O console precisa estar na mesma rede, com Remote Play ativado.</div>
+				<h1>Seus consoles</h1>
+				<div class="lead">Escolha onde jogar. O console precisa estar com o Remote Play ativado.</div>
 			</div>
-			<div class="busy" data-if="cons.refreshing"><div class="spinner"></div><span>Procurando consoles</span></div>
+			<div class="searching" data-if="cons.refreshing"><div class="spinner"></div><span>Procurando consoles</span></div>
 		</div>
 
-		<div class="banner" data-if="cons.error != ''">{{ cons.error }}</div>
+		<div class="notice" data-if="cons.error != ''">{{ cons.error }}</div>
 
-		<div class="grid">
-			<div class="card elev-1" data-for="c : cons.list" data-attr-id="'console-' + it_index" data-class-on="c.on" data-class-busy="c.busy" data-event-click="pick(c.id)">
+		<div class="shelf">
+			<div class="tile tile-size" data-for="c : cons.list" data-attr-id="'console-' + it_index" autofocus=""
+			     data-class-on="c.on" data-class-busy="c.busy" data-event-click="pick(c.id)">
+				<div class="state"><div class="led" data-class-alive="c.on"></div><span>{{ c.power }}</span></div>
 				<div>
-					<div class="glyph"><div class="bar"></div></div>
-					<div class="name">{{ c.name }}</div>
-					<div class="type">{{ c.type }}</div>
+					<div class="name display">{{ c.name }}</div>
+					<div class="model">{{ c.type }}</div>
 				</div>
-				<div class="pill" data-class-on="c.on"><div class="led"></div><span>{{ c.power }}</span></div>
-				<div class="actions">
-					<div class="busy" data-if="c.busy"><div class="spinner"></div><span>Aguarde…</span></div>
+				<div class="go">
+					<div class="waiting" data-if="c.busy"><div class="spinner"></div><span>Aguarde</span></div>
 					<div class="cta" data-if="!c.busy">{{ c.action }}</div>
 				</div>
 			</div>
+
+			<!-- Placeholders in the tiles' real shape while the first list (or an empty refresh) is pending. -->
+			<div class="skeleton-card tile-size" data-if="cons.loading">
+				<div class="skeleton-line w-40"></div>
+				<div><div class="skeleton-line display w-60"></div><div class="skeleton-line w-40"></div></div>
+				<div class="skeleton-line chip"></div>
+			</div>
+			<div class="skeleton-card tile-size" data-if="cons.loading">
+				<div class="skeleton-line w-40"></div>
+				<div><div class="skeleton-line display w-80"></div><div class="skeleton-line w-40"></div></div>
+				<div class="skeleton-line chip"></div>
+			</div>
+			<div class="skeleton-card tile-size" data-if="cons.loading">
+				<div class="skeleton-line w-40"></div>
+				<div><div class="skeleton-line display w-60"></div><div class="skeleton-line w-40"></div></div>
+				<div class="skeleton-line chip"></div>
+			</div>
 		</div>
 
-		<div class="empty" data-if="cons.list.size == 0 &amp;&amp; !cons.refreshing">
-			Nenhum console encontrado nesta conta. Confira se o Xbox está ligado (ou em modo Instantâneo) e com
-			“Permitir Remote Play” ativado, e toque em Atualizar.
+		<div class="empty" data-if="cons.list.size == 0 &amp;&amp; !cons.refreshing &amp;&amp; !cons.loading">
+			<h2>Nenhum console nesta conta</h2>
+			<div class="muted">Ligue o console (ou deixe em modo Instantâneo), ative “Permitir Remote Play” nas configurações de dispositivos e conexões dele, e escolha Atualizar lista.</div>
 		</div>
 	</div>
 
-	<div class="footer-hint">Setas para navegar · <span class="keycap">Enter</span> para escolher</div>
+	<div class="hints"><span><span class="keycap">←</span><span class="keycap">→</span>escolhe o console</span><span><span class="keycap">Enter</span>conecta</span></div>
 </body>
 </rml>

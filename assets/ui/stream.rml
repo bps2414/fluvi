@@ -4,208 +4,200 @@
 	<title>Stream</title>
 	<link type="text/rcss" href="theme.rcss"/>
 	<style>
-		/* Transparent document over the live frame. */
+		/* Layout only: values come from theme.rcss tokens. Transparent document over the live frame. */
 		body { background-color: transparent; }
 
+		/* Always-on stats in the corner (opt-in): small, quiet, readable over any game. */
 		.corner
 		{
 			position: absolute;
 			top: var(--s4); left: var(--s4);
-			padding: 6dp 14dp;
+			display: flex;
+			flex-direction: row;
+			align-items: baseline;
+			gap: var(--s1h);
+			padding: var(--s1h) var(--s4) var(--s2) var(--s4);
 			border-radius: var(--r-pill);
-			background-color: #0a0c11a6;
-			backdrop-filter: blur(10dp);
-			border: 1dp var(--glass-line);
+			background-color: var(--bed-veil);
+			backdrop-filter: blur(var(--blur-sm));
 			font-size: var(--t-xs);
-			font-weight: 600;
-			color: var(--text);
+			color: var(--bank);
 			opacity: 0;
-			transition: opacity 0.2s cubic-out;
+			transition: opacity var(--d-base) cubic-out;
 		}
 		.corner.show { opacity: 1; }
-		.corner .accent { color: var(--accent); }
+		.corner .label-brand { margin-right: var(--s2); }
+		.corner .v { font-weight: 600; color: var(--foam); }
+		.corner .u { margin-right: var(--s2); }
 
 		.scrim
 		{
 			position: absolute; top: 0dp; left: 0dp; right: 0dp; bottom: 0dp;
-			decorator: linear-gradient(90deg, #00000000 45%, #0000008c);
+			decorator: linear-gradient(90deg, var(--scrim-clear) 40%, var(--scrim));
 			opacity: 0;
-			transition: opacity 0.25s cubic-out;
+			transition: opacity var(--d-slow) cubic-out;
 		}
 		.scrim.open { opacity: 1; }
 
+		/* The overlay: a pane of frosted river glass sliding in from the right edge. */
 		.glass
 		{
 			position: absolute;
 			top: var(--s5); bottom: var(--s5);
 			right: var(--s5);
-			width: 520dp;
+			width: 540dp;
 			box-sizing: border-box;
 			padding: var(--s6);
-			border-radius: var(--r-xl);
+			border-radius: var(--r-panel);
 			background-color: var(--glass);
-			backdrop-filter: blur(28dp);
+			backdrop-filter: blur(var(--blur-lg));
 			border: 1.5dp var(--glass-line);
-			box-shadow: #0000008c 0dp 30dp 80dp 0dp;
+			box-shadow: var(--shadow-panel);
 			opacity: 0;
-			transform: translateX(60dp);
-			transition: opacity transform 0.28s cubic-out;
+			transform: translateX(48dp);
+			transition: opacity transform var(--d-slow) cubic-out;
 			display: flex;
 			flex-direction: column;
 		}
 		.glass.open { opacity: 1; transform: translateX(0dp); }
 
 		.head { display: flex; flex-direction: row; align-items: center; justify-content: space-between; }
-		.head .wordmark { font-size: var(--t-lg); }
-		.live { display: flex; flex-direction: row; align-items: center; gap: 8dp; font-size: var(--t-xs); font-weight: 600; color: var(--text-2); }
-		.live .led { width: 8dp; height: 8dp; border-radius: 4dp; background-color: var(--accent); animation: 1s pulse infinite alternate; }
+		.head .brand-name { font-size: var(--t-lg); }
+		.head .brand-mark { width: 32dp; height: 32dp; border-radius: var(--r-row); }
+		.head .brand-mark .w { height: 3dp; }
+		.head .brand-mark .w1 { top: 9dp; left: 6dp; width: 16dp; }
+		.head .brand-mark .w2 { top: 15dp; left: 11dp; width: 15dp; }
+		.head .brand-mark .w3 { top: 21dp; left: 7dp; width: 10dp; }
+		.live .res { color: var(--bank); font-weight: normal; margin-left: var(--s1); }
 
 		.segmented
 		{
-			margin-top: var(--s5);
+			margin-top: var(--s6);
 			display: flex; flex-direction: row;
-			padding: 5dp;
+			padding: var(--s1);
 			border-radius: var(--r-pill);
-			background-color: #ffffff0d;
-			border: 1dp var(--line);
+			background-color: var(--water);
 		}
 		.seg
 		{
 			flex: 1;
-			height: 48dp; line-height: 48dp;
+			height: 50dp; line-height: 46dp;
+			box-sizing: border-box;
 			border-radius: var(--r-pill);
 			text-align: center;
 			font-weight: 600;
 			font-size: var(--t-sm);
-			color: var(--text-2);
-			border: 1.5dp transparent;
-			transition: background-color color border-color 0.18s cubic-out;
-			nav-up: none;
+			color: var(--bank);
+			border: 2dp transparent;
+			transition: background-color color border-color var(--d-fast) cubic-out;
 		}
-		.seg:hover { color: var(--text); }
-		.seg.on { background-color: var(--accent); color: var(--accent-ink); }
-		.seg:focus-visible { border-color: var(--accent); color: var(--text); }
-		.seg.on:focus-visible { border-color: #ffffff; color: var(--accent-ink); }
-		.mode-hint { margin-top: var(--s3); font-size: var(--t-xs); color: var(--text-3); text-align: center; }
+		.seg:hover { color: var(--foam); }
+		.seg.on { background-color: var(--brand); color: var(--brand-ink); }
+		.seg:focus-visible { border-color: var(--brand); color: var(--foam); }
+		.seg.on:focus-visible { border-color: var(--brand-edge); color: var(--brand-ink); }
+		.mode-hint { margin-top: var(--s3); min-height: 40dp; font-size: var(--t-xs); line-height: 1.45; color: var(--silt); }
 
-		.big
-		{
-			margin-top: var(--s5);
-			display: flex; flex-direction: row; align-items: flex-end; gap: var(--s3);
-		}
-		.big .num { font-family: "Inter Display"; font-weight: bold; font-size: 64dp; line-height: 1em; }
-		.big .unit { font-size: var(--t-md); color: var(--text-2); padding-bottom: 8dp; }
-		.big .cap { font-size: var(--t-xs); color: var(--text-3); padding-bottom: 10dp; margin-left: auto; }
+		/* Latency is the number people open this panel for. */
+		.big { margin-top: var(--s5); height: var(--t-stat); display: flex; flex-direction: row; align-items: baseline; gap: var(--s2h); }
+		.big .num { font-size: var(--t-stat); letter-spacing: -2dp; line-height: 1; }
+		.big .unit { font-size: var(--t-lg); color: var(--bank); }
+		.big .skeleton-line { width: 200dp; height: var(--t-stat); margin: 0dp; border-radius: var(--r-row); }
+		.big-cap { margin-top: var(--s0); font-size: var(--t-xs); color: var(--silt); }
 
-		.fps { margin-top: var(--s4); display: flex; flex-direction: row; gap: var(--s2); }
-		.fps .cell
-		{
-			flex: 1;
-			padding: var(--s3) var(--s3);
-			border-radius: var(--r-md);
-			background-color: #ffffff0a;
-			border: 1dp var(--line);
-		}
+		.fps { margin-top: var(--s5); display: flex; flex-direction: row; gap: var(--s1h); }
+		.fps .cell { flex: 1; padding: var(--s3) var(--s3h); border-radius: var(--r-row); background-color: var(--water); }
 		.fps .v { font-size: var(--t-lg); font-weight: bold; }
-		.fps .k { font-size: 13dp; color: var(--text-3); margin-top: 2dp; }
-		.fps .cell.gen .v { color: var(--accent); }
+		.fps .k { font-size: var(--t-xs); color: var(--silt); margin-top: var(--s0); }
+		.fps .cell.gen .v { color: var(--brand); }
+		.fps .skeleton-line { height: var(--t-lg); margin: 0dp; }
 
 		.rows { margin-top: var(--s4); }
 		.kv
 		{
 			display: flex; flex-direction: row; justify-content: space-between;
-			padding: 10dp 0dp;
-			border-bottom: 1dp #ffffff0f;
+			padding: var(--s2) 0dp;
+			border-bottom: 1dp var(--divider);
 			font-size: var(--t-sm);
 		}
-		.kv .k { color: var(--text-2); }
+		.kv .k { color: var(--bank); }
 		.kv .v { font-weight: 600; }
-		.kv .v.good { color: var(--accent); }
-
-		.warn
-		{
-			margin-top: var(--s4);
-			padding: var(--s3) var(--s4);
-			border-radius: var(--r-md);
-			background-color: var(--danger-soft);
-			color: var(--danger);
-			font-size: var(--t-sm);
-			font-weight: 600;
-		}
+		.kv .v.good { color: var(--alive); }
+		.glass .notice { margin-top: var(--s4); font-size: var(--t-sm); }
 
 		.spacer { flex: 1; }
 
 		.toggle
 		{
 			display: flex; flex-direction: row; align-items: center; justify-content: space-between;
-			padding: 10dp 14dp;
-			margin: 0dp -14dp;
-			border-radius: var(--r-md);
+			padding: var(--s2h) var(--s3h);
+			border-radius: var(--r-row);
 			font-size: var(--t-sm);
-			color: var(--text-2);
-			border: 1.5dp transparent;
-			transition: background-color border-color 0.16s cubic-out;
+			color: var(--bank);
+			border: 2dp transparent;
+			transition: background-color border-color var(--d-fast) cubic-out;
 		}
-		.toggle:hover { background-color: var(--surface); }
-		.toggle:focus-visible { border-color: var(--accent); background-color: var(--surface); color: var(--text); }
-		.switch { width: 46dp; height: 26dp; border-radius: 13dp; background-color: #ffffff24; transition: background-color 0.2s cubic-out; }
-		.switch .knob { margin: 3dp; width: 20dp; height: 20dp; border-radius: 10dp; background-color: #ffffff; transition: transform 0.2s cubic-out; }
-		.switch.on { background-color: var(--accent); }
-		.switch.on .knob { transform: translateX(20dp); }
+		.toggle:hover { background-color: var(--water); }
+		.toggle:focus-visible { border-color: var(--brand); background-color: var(--water); color: var(--foam); }
 
 		.foot { margin-top: var(--s4); display: flex; flex-direction: row; gap: var(--s3); }
 		.foot button { flex: 1; }
-		.hint { margin-top: var(--s4); font-size: var(--t-xs); color: var(--text-3); text-align: center; }
+		.hint { margin-top: var(--s4); display: flex; flex-direction: row; justify-content: center; gap: var(--s5); font-size: var(--t-xs); color: var(--silt); }
 	</style>
 </head>
 <body data-model="fluvi">
 	<div class="corner" data-class-show="stream.corner &amp;&amp; !stream.overlay">
-		<span class="accent">{{ stream.mode }}</span>  ·  {{ stream.corner_line }}
+		<span class="label-brand">{{ stream.mode }}</span>
+		<span class="v">{{ stream.latency }}</span><span class="u">ms</span>
+		<span class="v">{{ stream.fps_present }}</span><span class="u">fps</span>
 	</div>
 
 	<div class="scrim" data-class-open="stream.overlay"></div>
 
 	<div class="glass" data-class-open="stream.overlay">
 		<div class="head">
-			<div class="wordmark">Fluvi<span class="dot">.</span></div>
-			<div class="live"><div class="led"></div><span>AO VIVO · {{ stream.res_out }}</span></div>
+			<div class="brand">
+				<div class="brand-mark"><div class="w w1"></div><div class="w w2"></div><div class="w w3"></div></div>
+				<div class="brand-name">Fluvi</div>
+			</div>
+			<div class="live"><div class="led"></div><span>Ao vivo</span><span class="res">{{ stream.res_out }}</span></div>
 		</div>
 
 		<div class="segmented">
-			<div class="seg autofocus" id="mode-play" data-class-on="!stream.smooth" data-event-click="set_mode(0)">Jogar</div>
+			<div class="seg" autofocus="" id="mode-play" data-class-on="!stream.smooth" data-event-click="set_mode(0)">Jogar</div>
 			<div class="seg" id="mode-smooth" data-class-on="stream.smooth" data-event-click="set_mode(1)">Liso</div>
 		</div>
 		<div class="mode-hint">{{ stream.mode_hint }}</div>
 
 		<div class="big">
-			<div class="num">{{ stream.latency }}</div>
+			<div class="num display" data-if="stream.has_stats">{{ stream.latency }}</div>
+			<div class="skeleton-line" data-if="!stream.has_stats"></div>
 			<div class="unit">ms</div>
-			<div class="cap">latência do cliente · RTT {{ stream.rtt }}</div>
 		</div>
+		<div class="big-cap">de latência no cliente, ida e volta da rede em {{ stream.rtt }}</div>
 
 		<div class="fps">
-			<div class="cell"><div class="v">{{ stream.fps_game }}</div><div class="k">fps do jogo</div></div>
-			<div class="cell"><div class="v">{{ stream.fps_stream }}</div><div class="k">fps do stream</div></div>
-			<div class="cell gen"><div class="v">{{ stream.fps_gen }}</div><div class="k">fps gerados</div></div>
-			<div class="cell"><div class="v">{{ stream.fps_present }}</div><div class="k">na tela</div></div>
+			<div class="cell"><div class="v" data-if="stream.has_stats">{{ stream.fps_game }}</div><div class="skeleton-line" data-if="!stream.has_stats"></div><div class="k">do jogo</div></div>
+			<div class="cell"><div class="v" data-if="stream.has_stats">{{ stream.fps_stream }}</div><div class="skeleton-line" data-if="!stream.has_stats"></div><div class="k">recebidos</div></div>
+			<div class="cell gen"><div class="v" data-if="stream.has_stats">{{ stream.fps_gen }}</div><div class="skeleton-line" data-if="!stream.has_stats"></div><div class="k">gerados</div></div>
+			<div class="cell"><div class="v" data-if="stream.has_stats">{{ stream.fps_present }}</div><div class="skeleton-line" data-if="!stream.has_stats"></div><div class="k">na tela</div></div>
 		</div>
 
 		<div class="rows">
-			<div class="kv"><span class="k">Resolução</span><span class="v">{{ stream.res }}</span></div>
+			<div class="kv"><span class="k">Resolução do stream</span><span class="v">{{ stream.res }}</span></div>
 			<div class="kv"><span class="k">Bitrate</span><span class="v">{{ stream.bitrate }}</span></div>
 			<div class="kv"><span class="k">Apresentação</span><span class="v" data-class-good="stream.flip">{{ stream.present }}</span></div>
 			<div class="kv"><span class="k">VRR</span><span class="v" data-class-good="stream.vrr_on">{{ stream.vrr }}</span></div>
 			<div class="kv"><span class="k">Monitor</span><span class="v">{{ stream.refresh }}</span></div>
-			<div class="kv"><span class="k">Decode · GPU</span><span class="v">{{ stream.timing }}</span></div>
+			<div class="kv"><span class="k">Decodificação / GPU</span><span class="v">{{ stream.timing }}</span></div>
 			<div class="kv"><span class="k">Perdas</span><span class="v">{{ stream.loss }}</span></div>
 		</div>
 
-		<div class="warn" data-if="stream.warning != ''">{{ stream.warning }}</div>
+		<div class="notice" data-if="stream.warning != ''">{{ stream.warning }}</div>
 
 		<div class="spacer"></div>
 
 		<div class="toggle" id="toggle-corner" data-event-click="toggle_corner">
-			<span>Stats no canto da tela</span>
+			<span>Mostrar latência e fps no canto</span>
 			<div class="switch" data-class-on="stream.corner"><div class="knob"></div></div>
 		</div>
 
@@ -213,7 +205,10 @@
 			<button id="stream-settings" data-event-click="open_settings">Configurações</button>
 			<button class="danger" id="stream-disconnect" data-event-click="disconnect">Desconectar</button>
 		</div>
-		<div class="hint"><span class="keycap">{{ stream.hk_overlay }}</span> fecha  ·  <span class="keycap">{{ stream.hk_mode }}</span> Jogar/Liso</div>
+		<div class="hint">
+			<span><span class="keycap">{{ stream.hk_overlay }}</span>fecha o painel</span>
+			<span><span class="keycap">{{ stream.hk_mode }}</span>troca o modo</span>
+		</div>
 	</div>
 </body>
 </rml>

@@ -4,112 +4,131 @@
 	<title>Entrar</title>
 	<link type="text/rcss" href="theme.rcss"/>
 	<style>
+		/* Layout only: values come from theme.rcss tokens. */
 		.stage
 		{
 			position: absolute;
-			top: 0dp; left: 0dp; right: 0dp; bottom: 0dp;
+			top: 120dp; left: var(--margin); right: var(--margin); bottom: var(--s9);
 			display: flex;
 			flex-direction: row;
 			align-items: center;
-			justify-content: center;
-			gap: var(--s9);
+			justify-content: space-between;
 		}
-		.copy { width: 720dp; }
-		.copy h1 { margin-top: var(--s4); margin-bottom: var(--s4); }
-		.copy .lead { font-size: var(--t-lg); color: var(--text-2); line-height: 1.45em; }
+		.copy { width: 860dp; }
+		.copy .lead { margin-top: var(--s4); width: 720dp; }
 
-		.code-card
+		/* The two steps really are a sequence, so they are numbered. */
+		.steps { margin-top: var(--s7); }
+		.step { display: flex; flex-direction: row; align-items: flex-start; gap: var(--s4); margin-bottom: var(--s5); }
+		.step .n
 		{
-			margin-top: var(--s7);
-			padding: var(--s6) var(--s6);
-			border-radius: var(--r-xl);
-			background-color: var(--surface);
-			border: 1.5dp var(--line);
+			width: 34dp; height: 34dp;
+			line-height: 32dp;
+			border-radius: var(--r-pill);
+			border: 1.5dp var(--line-hi);
+			text-align: center;
+			font-size: var(--t-sm);
+			font-weight: 600;
+			color: var(--bank);
 		}
+		.step .what { font-size: var(--t-md); color: var(--bank); padding-top: var(--s1); }
+
+		/* The code is the reason this screen exists: it is set like a sign over the water. */
 		.code
 		{
+			margin-top: var(--s2);
 			font-family: "Inter Display";
 			font-weight: bold;
 			font-size: var(--t-hero);
-			letter-spacing: 8dp;
-			color: var(--text);
-			margin-top: var(--s2);
+			letter-spacing: 10dp;
+			line-height: 1;
+			color: var(--foam);
 		}
-		.code.placeholder { color: var(--text-3); }
-		.uri { font-size: var(--t-lg); color: var(--accent); font-weight: 600; }
-		.status
-		{
-			margin-top: var(--s5);
-			display: flex;
-			flex-direction: row;
-			align-items: center;
-			gap: var(--s3);
-			color: var(--text-2);
-		}
+		.code.placeholder { color: var(--ghost-text); }
+		.copy .rule-brand { margin-top: var(--s4); width: 640dp; }
+
+		.status { margin-top: var(--s5); display: flex; flex-direction: row; align-items: center; gap: var(--s3); color: var(--bank); }
 		.status.err { color: var(--danger); }
 		.actions { margin-top: var(--s6); display: flex; flex-direction: row; gap: var(--s3); }
 
-		.qr-wrap
+		.qr-slot { width: 440dp; height: 492dp; }
+		.qr
 		{
-			width: 420dp;
-			padding: var(--s5);
-			border-radius: var(--r-xl);
-			background-color: #ffffff;
-			text-align: center;
+			box-sizing: border-box;
+			padding: var(--s6) var(--s6);
+			border-radius: var(--r-panel);
+			background-color: var(--paper);
+			box-shadow: var(--shadow-paper);
 		}
-		.qr-wrap img { width: 372dp; height: 372dp; }
-		.qr-wrap .cap { color: #3a4150; font-size: var(--t-sm); font-weight: 600; margin-top: var(--s3); }
+		.qr img { display: block; width: 384dp; height: 384dp; }
+		.qr .cap { margin-top: var(--s4); text-align: center; color: var(--paper-ink); font-size: var(--t-sm); font-weight: 600; }
 		.qr-empty
 		{
-			width: 420dp;
-			height: 470dp;
-			border-radius: var(--r-xl);
+			box-sizing: border-box;
+			padding: var(--s6);
+			border-radius: var(--r-panel);
 			border: 1.5dp var(--line);
-			background-color: var(--surface);
+			background-color: var(--water);
 			display: flex;
+			flex-direction: column;
 			align-items: center;
 			justify-content: center;
+			text-align: center;
+			color: var(--silt);
+			font-size: var(--t-sm);
 		}
 	</style>
 </head>
 <body class="solid" data-model="fluvi">
 	<div class="topbar">
-		<div class="wordmark">Fluvi<span class="dot">.</span></div>
+		<div class="brand large">
+			<div class="brand-mark"><div class="w w1"></div><div class="w w2"></div><div class="w w3"></div></div>
+			<div>
+				<div class="brand-name">Fluvi</div>
+				<div class="brand-tag">Do seu console para esta tela</div>
+			</div>
+		</div>
 		<div class="right">
 			<button class="ghost" id="signin-settings" data-event-click="open_settings">Configurações</button>
 		</div>
 	</div>
 
-	<div class="stage enter">
+	<div class="stage arrive">
 		<div class="copy">
-			<div class="eyebrow">XBOX REMOTE PLAY</div>
 			<h1>Entre com sua conta Microsoft</h1>
-			<div class="lead">Abra o endereço abaixo no celular ou no computador e digite o código. A janela continua sozinha quando o login terminar.</div>
+			<div class="lead">Confirme o login no celular ou no computador. Esta tela continua sozinha quando você terminar.</div>
 
-			<div class="code-card elev-2">
-				<div class="uri">{{ sign.uri_short }}</div>
-				<div class="code" data-if="sign.has_code">{{ sign.code }}</div>
-				<div class="code placeholder" data-if="!sign.has_code">····-····</div>
-				<div class="status" data-class-err="sign.error">
-					<div class="spinner" data-if="sign.busy"></div>
-					<span>{{ sign.status }}</span>
-				</div>
+			<div class="steps">
+				<div class="step"><div class="n">1</div><div class="what">Abra <span class="label-brand">{{ sign.uri_short }}</span></div></div>
+				<div class="step"><div class="n">2</div><div class="what">Digite o código</div></div>
+			</div>
+
+			<div class="code" data-if="sign.has_code">{{ sign.code }}</div>
+			<div class="skeleton-line hero" data-if="!sign.has_code &amp;&amp; sign.pending"></div>
+			<div class="code placeholder" data-if="!sign.has_code &amp;&amp; !sign.pending">XXXX-XXXX</div>
+			<div class="rule-brand"></div>
+
+			<div class="status" data-class-err="sign.error">
+				<div class="spinner" data-if="sign.busy"></div>
+				<span data-if="sign.status != ''">{{ sign.status }}</span>
+				<span data-if="sign.status == ''">Escolha Entrar para gerar o seu código.</span>
 			</div>
 
 			<div class="actions">
-				<button class="primary autofocus" id="signin-start" data-if="!sign.busy" data-event-click="sign_in">Entrar</button>
-				<button id="signin-cancel" data-if="sign.busy" data-event-click="cancel_sign_in">Cancelar</button>
-				<button class="ghost" id="signin-quit" data-event-click="quit">Sair</button>
+				<button class="primary" autofocus="" id="signin-start" data-if="!sign.busy" data-event-click="sign_in">Entrar</button>
+				<button autofocus="" id="signin-cancel" data-if="sign.busy" data-event-click="cancel_sign_in">Cancelar</button>
+				<button class="ghost" id="signin-quit" data-event-click="quit">Fechar o Fluvi</button>
 			</div>
 		</div>
 
-		<div class="qr-wrap elev-3" data-if="sign.has_qr">
+		<div class="qr qr-slot" data-if="sign.has_qr">
 			<img data-attr-src="sign.qr"/>
-			<div class="cap">Aponte a câmera do celular</div>
+			<div class="cap">Ou aponte a câmera do celular</div>
 		</div>
-		<div class="qr-empty" data-if="!sign.has_qr">
-			<div class="spinner" data-if="sign.busy"></div>
-		</div>
+		<div class="skeleton-block qr-slot" data-if="!sign.has_qr &amp;&amp; sign.pending"></div>
+		<div class="qr-empty qr-slot" data-if="!sign.has_qr &amp;&amp; !sign.pending">O QR code aparece aqui junto com o código.</div>
 	</div>
+
+	<div class="hints"><span><span class="keycap">Enter</span>escolhe</span><span><span class="keycap">Tab</span>próximo</span></div>
 </body>
 </rml>

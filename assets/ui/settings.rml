@@ -4,104 +4,113 @@
 	<title>Configurações</title>
 	<link type="text/rcss" href="theme.rcss"/>
 	<style>
-		/* Glass over whatever is behind (the stream, or the dark app background). */
+		/* Frosted water over whatever is behind (the stream, or the app background). */
 		body
 		{
-			background-color: #0a0c11d9;
-			backdrop-filter: blur(30dp);
+			background-color: var(--bed-frost);
+			backdrop-filter: blur(var(--blur-lg));
 		}
-		.page { position: absolute; top: 120dp; bottom: 0dp; left: 0dp; right: 0dp; padding: 0dp var(--s8); display: flex; flex-direction: row; gap: var(--s8); }
+		.page
+		{
+			position: absolute;
+			top: 168dp; bottom: 0dp; left: var(--margin); right: var(--s8);
+			display: flex;
+			flex-direction: row;
+			gap: var(--s9);
+		}
 
-		.side { width: 360dp; }
-		.side h1 { margin-top: var(--s3); }
-		.side .sub { margin-top: var(--s3); color: var(--text-2); line-height: 1.45em; }
+		.side { width: 400dp; }
+		.side .lead { margin-top: var(--s4); font-size: var(--t-md); }
 		.side .back { margin-top: var(--s6); }
 
 		.list
 		{
 			flex: 1;
-			max-width: 980dp;
+			max-width: 1000dp;
 			overflow-y: auto;
-			padding-bottom: var(--s8);
-			padding-right: var(--s4);
+			padding: var(--s1) var(--s4) var(--s9) var(--s1);
 		}
-		.group { margin-top: var(--s6); margin-bottom: var(--s3); }
+		.group { margin-top: var(--s7); margin-bottom: var(--s3); font-size: var(--t-sm); }
 		.group.first { margin-top: 0dp; }
 
 		.row
 		{
 			display: flex; flex-direction: row; align-items: center;
 			box-sizing: border-box;
-			min-height: 76dp;
+			min-height: 80dp;
 			padding: var(--s3) var(--s5);
-			margin-bottom: var(--s2);
-			border-radius: var(--r-md);
-			background-color: var(--surface);
-			border: 1.5dp transparent;
+			margin-bottom: var(--s1h);
+			border-radius: var(--r-row);
+			background-color: var(--water);
+			border: 2dp transparent;
 			nav-left: none;
 			nav-right: none;
-			transition: background-color border-color 0.16s cubic-out;
+			transition: background-color border-color var(--d-fast) cubic-out;
 		}
-		.row:hover { background-color: var(--surface-hi); }
-		.row:focus-visible { border-color: var(--accent); background-color: var(--surface-hi); box-shadow: #3fd9c833 0dp 0dp 0dp 4dp; }
-		.row .label { flex: 1; }
+		.row:hover { background-color: var(--water-hi); }
+		.row:focus-visible { border-color: var(--brand); background-color: var(--water-hi); box-shadow: var(--glow-row); }
+		.row .label { flex: 1; padding-right: var(--s5); }
 		.row .label .t { font-weight: 600; font-size: var(--t-md); }
-		.row .label .d { font-size: var(--t-xs); color: var(--text-3); margin-top: 3dp; }
+		.row .label .d { font-size: var(--t-xs); color: var(--silt); margin-top: var(--s0); }
 
-		.stepper { display: flex; flex-direction: row; align-items: center; gap: var(--s3); }
+		.stepper { display: flex; flex-direction: row; align-items: center; gap: var(--s2); }
 		.arrow
 		{
-			width: 34dp; height: 34dp; line-height: 32dp;
-			border-radius: 17dp;
+			width: 40dp; height: 40dp; line-height: 36dp;
+			border-radius: var(--r-pill);
 			text-align: center;
-			font-weight: bold;
-			color: var(--text-3);
+			font-size: var(--t-lg);
+			color: var(--silt);
 			cursor: pointer;
-			transition: color background-color 0.15s cubic-out;
+			transition: color background-color var(--d-fast) cubic-out;
 		}
-		.arrow:hover { color: var(--text); background-color: var(--surface-hi); }
-		.row:focus-visible .arrow { color: var(--accent); }
-		.value { min-width: 170dp; text-align: center; font-weight: 600; }
+		.arrow:hover { color: var(--foam); background-color: var(--water-hi); }
+		.row:focus-visible .arrow { color: var(--brand); }
+		.value { width: 180dp; text-align: center; font-weight: 600; }
+		.value-wrap { width: 180dp; }
 
-		.meter { width: 170dp; height: 6dp; margin-top: 8dp; border-radius: 3dp; background-color: #ffffff1a; }
-		.meter .fill { height: 6dp; border-radius: 3dp; background-color: var(--accent); transition: width 0.15s cubic-out; }
-
-		.switch { width: 52dp; height: 30dp; border-radius: 15dp; background-color: #ffffff24; transition: background-color 0.2s cubic-out; }
-		.switch .knob { margin: 4dp; width: 22dp; height: 22dp; border-radius: 11dp; background-color: #ffffff; transition: transform 0.2s cubic-out; }
-		.switch.on { background-color: var(--accent); }
-		.switch.on .knob { transform: translateX(22dp); }
-
-		.keys { display: flex; flex-direction: row; flex-wrap: wrap; gap: var(--s2); }
+		.keys { display: flex; flex-direction: row; flex-wrap: wrap; gap: var(--s1h); }
 		.key
 		{
 			display: flex; flex-direction: row; align-items: center; justify-content: space-between;
-			width: 470dp; box-sizing: border-box;
+			width: 482dp; box-sizing: border-box;
 			padding: var(--s3) var(--s5);
-			border-radius: var(--r-md);
-			background-color: #ffffff08;
-			color: var(--text-2);
+			border-radius: var(--r-row);
+			background-color: var(--water);
+			color: var(--bank);
 			font-size: var(--t-sm);
 		}
 	</style>
 </head>
 <body data-model="fluvi">
 	<div class="topbar">
-		<div class="wordmark">Fluvi<span class="dot">.</span></div>
-		<div class="right"><span class="faint">Setas ‹ › mudam o valor · <span class="keycap">Esc</span> volta</span></div>
+		<div class="brand">
+			<div class="brand-mark"><div class="w w1"></div><div class="w w2"></div><div class="w w3"></div></div>
+			<div class="brand-name">Fluvi</div>
+		</div>
 	</div>
 
-	<div class="page enter">
+	<div class="page arrive">
 		<div class="side">
-			<div class="eyebrow">PREFERÊNCIAS</div>
 			<h1>Configurações</h1>
-			<div class="sub">As mudanças valem na hora. Resolução e bitrate entram na próxima conexão.</div>
+			<div class="lead">Valem na hora. Resolução e bitrate entram na próxima conexão.</div>
 			<button class="back" id="settings-back" data-event-click="close_settings">Voltar</button>
 		</div>
 
 		<div class="list">
-			<div class="eyebrow group first">VÍDEO</div>
-			<div class="row autofocus" id="set-resolution" data-setting="resolution">
-				<div class="label"><div class="t">Resolução do stream</div><div class="d">1440p é reduzido para a tela com mais nitidez</div></div>
+			<!-- Placeholders in the rows' real shape until the app sends the settings. -->
+			<div data-if="!set.loaded">
+				<div class="skeleton-line w-20"></div>
+				<div class="skeleton-card flat"><div><div class="skeleton-line w-40"></div><div class="skeleton-line w-80"></div></div><div class="skeleton-line chip"></div></div>
+				<div class="skeleton-card flat"><div><div class="skeleton-line w-20"></div><div class="skeleton-line w-60"></div></div><div class="skeleton-line chip"></div></div>
+				<div class="skeleton-card flat"><div><div class="skeleton-line w-40"></div><div class="skeleton-line w-80"></div></div><div class="skeleton-line chip"></div></div>
+				<div class="skeleton-card flat"><div><div class="skeleton-line w-40"></div><div class="skeleton-line w-60"></div></div><div class="skeleton-line chip"></div></div>
+				<div class="skeleton-card flat"><div><div class="skeleton-line w-20"></div><div class="skeleton-line w-40"></div></div><div class="skeleton-line chip"></div></div>
+			</div>
+			<div data-if="set.loaded">
+			<div class="group label-brand first">Vídeo</div>
+			<div class="row" autofocus="" id="set-resolution" data-setting="resolution">
+				<div class="label"><div class="t">Resolução do stream</div><div class="d">1440p reduzido para a sua tela fica mais nítido que 1080p</div></div>
 				<div class="stepper"><div class="arrow" data-dir="-1">‹</div><div class="value">{{ set.resolution }}</div><div class="arrow" data-dir="1">›</div></div>
 			</div>
 			<div class="row" id="set-bitrate" data-setting="bitrate">
@@ -109,51 +118,54 @@
 				<div class="stepper"><div class="arrow" data-dir="-1">‹</div><div class="value">{{ set.bitrate }}</div><div class="arrow" data-dir="1">›</div></div>
 			</div>
 			<div class="row" id="set-mode" data-setting="mode">
-				<div class="label"><div class="t">Modo padrão</div><div class="d">Jogar: menor latência · Liso: gera quadros 30→60</div></div>
+				<div class="label"><div class="t">Modo ao conectar</div><div class="d">Jogar tem a menor latência. Liso gera quadros para chegar a 60 fps.</div></div>
 				<div class="stepper"><div class="arrow" data-dir="-1">‹</div><div class="value">{{ set.mode }}</div><div class="arrow" data-dir="1">›</div></div>
 			</div>
 			<div class="row" id="set-deblock" data-setting="deblock">
-				<div class="label"><div class="t">Redução de blocos</div><div class="d">Suaviza artefatos de compressão</div></div>
-				<div class="stepper"><div class="arrow" data-dir="-1">‹</div><div><div class="value">{{ set.deblock }}</div><div class="meter"><div class="fill" data-style-width="set.deblock_pct + '%'"></div></div></div><div class="arrow" data-dir="1">›</div></div>
+				<div class="label"><div class="t">Redução de blocos</div><div class="d">Suaviza os artefatos de compressão</div></div>
+				<div class="stepper"><div class="arrow" data-dir="-1">‹</div><div class="value-wrap"><div class="value">{{ set.deblock }}</div><div class="meter"><div class="fill" data-style-width="set.deblock_pct + '%'"></div></div></div><div class="arrow" data-dir="1">›</div></div>
 			</div>
 			<div class="row" id="set-sharpness" data-setting="sharpness">
-				<div class="label"><div class="t">Nitidez</div><div class="d">RCAS depois da redução de escala</div></div>
-				<div class="stepper"><div class="arrow" data-dir="-1">‹</div><div><div class="value">{{ set.sharpness }}</div><div class="meter"><div class="fill" data-style-width="set.sharpness_pct + '%'"></div></div></div><div class="arrow" data-dir="1">›</div></div>
+				<div class="label"><div class="t">Nitidez</div><div class="d">Aplicada depois de ajustar a imagem à sua tela</div></div>
+				<div class="stepper"><div class="arrow" data-dir="-1">‹</div><div class="value-wrap"><div class="value">{{ set.sharpness }}</div><div class="meter"><div class="fill" data-style-width="set.sharpness_pct + '%'"></div></div></div><div class="arrow" data-dir="1">›</div></div>
 			</div>
 			<div class="row" id="set-fullscreen" data-setting="fullscreen">
-				<div class="label"><div class="t">Tela cheia</div><div class="d">Sem bordas, nunca exclusiva</div></div>
+				<div class="label"><div class="t">Tela cheia</div><div class="d">Sem bordas, sem tirar o Windows do modo normal</div></div>
 				<div class="switch" data-class-on="set.fullscreen_on"><div class="knob"></div></div>
 			</div>
 			<div class="row" id="set-switchhz" data-setting="switchhz">
-				<div class="label"><div class="t">Trocar Hz em tela cheia</div><div class="d">Sem VRR: muda o monitor para 120 Hz e volta ao sair</div></div>
+				<div class="label"><div class="t">Mudar para 120 Hz em tela cheia</div><div class="d">Para monitores sem VRR. A taxa original volta quando você sai.</div></div>
 				<div class="switch" data-class-on="set.switchhz_on"><div class="knob"></div></div>
 			</div>
 
-			<div class="eyebrow group">CONTROLE</div>
+			<div class="group label-brand">Controle</div>
 			<div class="row" id="set-rumble" data-setting="rumble">
-				<div class="label"><div class="t">Vibração</div><div class="d">Repassa a vibração do jogo para o controle</div></div>
+				<div class="label"><div class="t">Vibração</div><div class="d">O controle vibra quando o jogo pedir</div></div>
 				<div class="switch" data-class-on="set.rumble_on"><div class="knob"></div></div>
 			</div>
 			<div class="row" id="set-strength" data-setting="strength">
-				<div class="label"><div class="t">Intensidade da vibração</div></div>
-				<div class="stepper"><div class="arrow" data-dir="-1">‹</div><div><div class="value">{{ set.strength }}</div><div class="meter"><div class="fill" data-style-width="set.strength_pct + '%'"></div></div></div><div class="arrow" data-dir="1">›</div></div>
+				<div class="label"><div class="t">Força da vibração</div></div>
+				<div class="stepper"><div class="arrow" data-dir="-1">‹</div><div class="value-wrap"><div class="value">{{ set.strength }}</div><div class="meter"><div class="fill" data-style-width="set.strength_pct + '%'"></div></div></div><div class="arrow" data-dir="1">›</div></div>
 			</div>
 
-			<div class="eyebrow group">ÁUDIO</div>
+			<div class="group label-brand">Áudio</div>
 			<div class="row" id="set-volume" data-setting="volume">
 				<div class="label"><div class="t">Volume</div></div>
-				<div class="stepper"><div class="arrow" data-dir="-1">‹</div><div><div class="value">{{ set.volume }}</div><div class="meter"><div class="fill" data-style-width="set.volume_pct + '%'"></div></div></div><div class="arrow" data-dir="1">›</div></div>
+				<div class="stepper"><div class="arrow" data-dir="-1">‹</div><div class="value-wrap"><div class="value">{{ set.volume }}</div><div class="meter"><div class="fill" data-style-width="set.volume_pct + '%'"></div></div></div><div class="arrow" data-dir="1">›</div></div>
 			</div>
 
-			<div class="eyebrow group">ATALHOS</div>
+			<div class="group label-brand">Atalhos</div>
 			<div class="keys">
-				<div class="key"><span>Mostrar/ocultar overlay</span><span class="keycap">{{ set.hk_overlay }}</span></div>
-				<div class="key"><span>Alternar Jogar / Liso</span><span class="keycap">{{ set.hk_mode }}</span></div>
+				<div class="key"><span>Abrir ou fechar o painel</span><span class="keycap">{{ set.hk_overlay }}</span></div>
+				<div class="key"><span>Trocar entre Jogar e Liso</span><span class="keycap">{{ set.hk_mode }}</span></div>
 				<div class="key"><span>Tela cheia</span><span class="keycap">{{ set.hk_full }}</span></div>
-				<div class="key"><span>Painel de debug</span><span class="keycap">{{ set.hk_debug }}</span></div>
-				<div class="key"><span>Overlay pelo controle</span><span class="keycap">View + Menu</span></div>
+				<div class="key"><span>Painel de diagnóstico</span><span class="keycap">{{ set.hk_debug }}</span></div>
+				<div class="key"><span>Painel pelo controle</span><span><span class="keycap">View</span>+<span class="keycap">Menu</span></span></div>
+			</div>
 			</div>
 		</div>
 	</div>
+
+	<div class="hints"><span><span class="keycap">←</span><span class="keycap">→</span>muda o valor</span><span><span class="keycap">Esc</span>volta</span></div>
 </body>
 </rml>
