@@ -24,7 +24,7 @@ inline OpusStream EncodeSine(int packetCount, bool fec = false, double freq = 44
         opus_encoder_ctl(enc, OPUS_SET_INBAND_FEC(1));
         opus_encoder_ctl(enc, OPUS_SET_PACKET_LOSS_PERC(25));
         opus_encoder_ctl(enc, OPUS_SET_BANDWIDTH(OPUS_BANDWIDTH_WIDEBAND));
-        opus_encoder_ctl(enc, OPUS_SET_FORCE_MODE(MODE_SILK_ONLY));
+        opus_encoder_ctl(enc, OPUS_SET_BITRATE(24000));   // low rate + wideband: the encoder picks SILK, where in-band FEC exists (FORCE_MODE is private API)
     }
     const double w = 2.0 * 3.14159265358979323846 * freq / 48000.0;
     s.pcm.resize(size_t(packetCount) * kFrame * 2);
