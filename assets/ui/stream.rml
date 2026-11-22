@@ -1,0 +1,219 @@
+<rml>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<head>
+	<title>Stream</title>
+	<link type="text/rcss" href="theme.rcss"/>
+	<style>
+		/* Transparent document over the live frame. */
+		body { background-color: transparent; }
+
+		.corner
+		{
+			position: absolute;
+			top: var(--s4); left: var(--s4);
+			padding: 6dp 14dp;
+			border-radius: var(--r-pill);
+			background-color: #0a0c11a6;
+			backdrop-filter: blur(10dp);
+			border: 1dp var(--glass-line);
+			font-size: var(--t-xs);
+			font-weight: 600;
+			color: var(--text);
+			opacity: 0;
+			transition: opacity 0.2s cubic-out;
+		}
+		.corner.show { opacity: 1; }
+		.corner .accent { color: var(--accent); }
+
+		.scrim
+		{
+			position: absolute; top: 0dp; left: 0dp; right: 0dp; bottom: 0dp;
+			decorator: linear-gradient(90deg, #00000000 45%, #0000008c);
+			opacity: 0;
+			transition: opacity 0.25s cubic-out;
+		}
+		.scrim.open { opacity: 1; }
+
+		.glass
+		{
+			position: absolute;
+			top: var(--s5); bottom: var(--s5);
+			right: var(--s5);
+			width: 520dp;
+			box-sizing: border-box;
+			padding: var(--s6);
+			border-radius: var(--r-xl);
+			background-color: var(--glass);
+			backdrop-filter: blur(28dp);
+			border: 1.5dp var(--glass-line);
+			box-shadow: #0000008c 0dp 30dp 80dp 0dp;
+			opacity: 0;
+			transform: translateX(60dp);
+			transition: opacity transform 0.28s cubic-out;
+			display: flex;
+			flex-direction: column;
+		}
+		.glass.open { opacity: 1; transform: translateX(0dp); }
+
+		.head { display: flex; flex-direction: row; align-items: center; justify-content: space-between; }
+		.head .wordmark { font-size: var(--t-lg); }
+		.live { display: flex; flex-direction: row; align-items: center; gap: 8dp; font-size: var(--t-xs); font-weight: 600; color: var(--text-2); }
+		.live .led { width: 8dp; height: 8dp; border-radius: 4dp; background-color: var(--accent); animation: 1s pulse infinite alternate; }
+
+		.segmented
+		{
+			margin-top: var(--s5);
+			display: flex; flex-direction: row;
+			padding: 5dp;
+			border-radius: var(--r-pill);
+			background-color: #ffffff0d;
+			border: 1dp var(--line);
+		}
+		.seg
+		{
+			flex: 1;
+			height: 48dp; line-height: 48dp;
+			border-radius: var(--r-pill);
+			text-align: center;
+			font-weight: 600;
+			font-size: var(--t-sm);
+			color: var(--text-2);
+			border: 1.5dp transparent;
+			transition: background-color color border-color 0.18s cubic-out;
+			nav-up: none;
+		}
+		.seg:hover { color: var(--text); }
+		.seg.on { background-color: var(--accent); color: var(--accent-ink); }
+		.seg:focus-visible { border-color: var(--accent); color: var(--text); }
+		.seg.on:focus-visible { border-color: #ffffff; color: var(--accent-ink); }
+		.mode-hint { margin-top: var(--s3); font-size: var(--t-xs); color: var(--text-3); text-align: center; }
+
+		.big
+		{
+			margin-top: var(--s5);
+			display: flex; flex-direction: row; align-items: flex-end; gap: var(--s3);
+		}
+		.big .num { font-family: "Inter Display"; font-weight: bold; font-size: 64dp; line-height: 1em; }
+		.big .unit { font-size: var(--t-md); color: var(--text-2); padding-bottom: 8dp; }
+		.big .cap { font-size: var(--t-xs); color: var(--text-3); padding-bottom: 10dp; margin-left: auto; }
+
+		.fps { margin-top: var(--s4); display: flex; flex-direction: row; gap: var(--s2); }
+		.fps .cell
+		{
+			flex: 1;
+			padding: var(--s3) var(--s3);
+			border-radius: var(--r-md);
+			background-color: #ffffff0a;
+			border: 1dp var(--line);
+		}
+		.fps .v { font-size: var(--t-lg); font-weight: bold; }
+		.fps .k { font-size: 13dp; color: var(--text-3); margin-top: 2dp; }
+		.fps .cell.gen .v { color: var(--accent); }
+
+		.rows { margin-top: var(--s4); }
+		.kv
+		{
+			display: flex; flex-direction: row; justify-content: space-between;
+			padding: 10dp 0dp;
+			border-bottom: 1dp #ffffff0f;
+			font-size: var(--t-sm);
+		}
+		.kv .k { color: var(--text-2); }
+		.kv .v { font-weight: 600; }
+		.kv .v.good { color: var(--accent); }
+
+		.warn
+		{
+			margin-top: var(--s4);
+			padding: var(--s3) var(--s4);
+			border-radius: var(--r-md);
+			background-color: var(--danger-soft);
+			color: var(--danger);
+			font-size: var(--t-sm);
+			font-weight: 600;
+		}
+
+		.spacer { flex: 1; }
+
+		.toggle
+		{
+			display: flex; flex-direction: row; align-items: center; justify-content: space-between;
+			padding: 10dp 14dp;
+			margin: 0dp -14dp;
+			border-radius: var(--r-md);
+			font-size: var(--t-sm);
+			color: var(--text-2);
+			border: 1.5dp transparent;
+			transition: background-color border-color 0.16s cubic-out;
+		}
+		.toggle:hover { background-color: var(--surface); }
+		.toggle:focus-visible { border-color: var(--accent); background-color: var(--surface); color: var(--text); }
+		.switch { width: 46dp; height: 26dp; border-radius: 13dp; background-color: #ffffff24; transition: background-color 0.2s cubic-out; }
+		.switch .knob { margin: 3dp; width: 20dp; height: 20dp; border-radius: 10dp; background-color: #ffffff; transition: transform 0.2s cubic-out; }
+		.switch.on { background-color: var(--accent); }
+		.switch.on .knob { transform: translateX(20dp); }
+
+		.foot { margin-top: var(--s4); display: flex; flex-direction: row; gap: var(--s3); }
+		.foot button { flex: 1; }
+		.hint { margin-top: var(--s4); font-size: var(--t-xs); color: var(--text-3); text-align: center; }
+	</style>
+</head>
+<body data-model="fluvi">
+	<div class="corner" data-class-show="stream.corner &amp;&amp; !stream.overlay">
+		<span class="accent">{{ stream.mode }}</span>  ·  {{ stream.corner_line }}
+	</div>
+
+	<div class="scrim" data-class-open="stream.overlay"></div>
+
+	<div class="glass" data-class-open="stream.overlay">
+		<div class="head">
+			<div class="wordmark">Fluvi<span class="dot">.</span></div>
+			<div class="live"><div class="led"></div><span>AO VIVO · {{ stream.res_out }}</span></div>
+		</div>
+
+		<div class="segmented">
+			<div class="seg autofocus" id="mode-play" data-class-on="!stream.smooth" data-event-click="set_mode(0)">Jogar</div>
+			<div class="seg" id="mode-smooth" data-class-on="stream.smooth" data-event-click="set_mode(1)">Liso</div>
+		</div>
+		<div class="mode-hint">{{ stream.mode_hint }}</div>
+
+		<div class="big">
+			<div class="num">{{ stream.latency }}</div>
+			<div class="unit">ms</div>
+			<div class="cap">latência do cliente · RTT {{ stream.rtt }}</div>
+		</div>
+
+		<div class="fps">
+			<div class="cell"><div class="v">{{ stream.fps_game }}</div><div class="k">fps do jogo</div></div>
+			<div class="cell"><div class="v">{{ stream.fps_stream }}</div><div class="k">fps do stream</div></div>
+			<div class="cell gen"><div class="v">{{ stream.fps_gen }}</div><div class="k">fps gerados</div></div>
+			<div class="cell"><div class="v">{{ stream.fps_present }}</div><div class="k">na tela</div></div>
+		</div>
+
+		<div class="rows">
+			<div class="kv"><span class="k">Resolução</span><span class="v">{{ stream.res }}</span></div>
+			<div class="kv"><span class="k">Bitrate</span><span class="v">{{ stream.bitrate }}</span></div>
+			<div class="kv"><span class="k">Apresentação</span><span class="v" data-class-good="stream.flip">{{ stream.present }}</span></div>
+			<div class="kv"><span class="k">VRR</span><span class="v" data-class-good="stream.vrr_on">{{ stream.vrr }}</span></div>
+			<div class="kv"><span class="k">Monitor</span><span class="v">{{ stream.refresh }}</span></div>
+			<div class="kv"><span class="k">Decode · GPU</span><span class="v">{{ stream.timing }}</span></div>
+			<div class="kv"><span class="k">Perdas</span><span class="v">{{ stream.loss }}</span></div>
+		</div>
+
+		<div class="warn" data-if="stream.warning != ''">{{ stream.warning }}</div>
+
+		<div class="spacer"></div>
+
+		<div class="toggle" id="toggle-corner" data-event-click="toggle_corner">
+			<span>Stats no canto da tela</span>
+			<div class="switch" data-class-on="stream.corner"><div class="knob"></div></div>
+		</div>
+
+		<div class="foot">
+			<button id="stream-settings" data-event-click="open_settings">Configurações</button>
+			<button class="danger" id="stream-disconnect" data-event-click="disconnect">Desconectar</button>
+		</div>
+		<div class="hint"><span class="keycap">{{ stream.hk_overlay }}</span> fecha  ·  <span class="keycap">{{ stream.hk_mode }}</span> Jogar/Liso</div>
+	</div>
+</body>
+</rml>

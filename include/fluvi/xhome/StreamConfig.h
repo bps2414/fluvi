@@ -27,6 +27,9 @@ struct StreamConfig {
     // value the console is known to accept (agent B documents the number it picked and why).
     uint32_t maxBitrateKbps = 0;
     std::string locale = "pt-BR";
+    // Additive (agent B): list H.264 High first in the offer, then Main, Constrained Baseline, Baseline
+    // (the reference client offers only the last three). Turn off if a console ever rejects the offer.
+    bool offerHighProfile = true;
 };
 
 } // namespace fluvi::xhome

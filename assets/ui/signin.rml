@@ -1,0 +1,115 @@
+<rml>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<head>
+	<title>Entrar</title>
+	<link type="text/rcss" href="theme.rcss"/>
+	<style>
+		.stage
+		{
+			position: absolute;
+			top: 0dp; left: 0dp; right: 0dp; bottom: 0dp;
+			display: flex;
+			flex-direction: row;
+			align-items: center;
+			justify-content: center;
+			gap: var(--s9);
+		}
+		.copy { width: 720dp; }
+		.copy h1 { margin-top: var(--s4); margin-bottom: var(--s4); }
+		.copy .lead { font-size: var(--t-lg); color: var(--text-2); line-height: 1.45em; }
+
+		.code-card
+		{
+			margin-top: var(--s7);
+			padding: var(--s6) var(--s6);
+			border-radius: var(--r-xl);
+			background-color: var(--surface);
+			border: 1.5dp var(--line);
+		}
+		.code
+		{
+			font-family: "Inter Display";
+			font-weight: bold;
+			font-size: var(--t-hero);
+			letter-spacing: 8dp;
+			color: var(--text);
+			margin-top: var(--s2);
+		}
+		.code.placeholder { color: var(--text-3); }
+		.uri { font-size: var(--t-lg); color: var(--accent); font-weight: 600; }
+		.status
+		{
+			margin-top: var(--s5);
+			display: flex;
+			flex-direction: row;
+			align-items: center;
+			gap: var(--s3);
+			color: var(--text-2);
+		}
+		.status.err { color: var(--danger); }
+		.actions { margin-top: var(--s6); display: flex; flex-direction: row; gap: var(--s3); }
+
+		.qr-wrap
+		{
+			width: 420dp;
+			padding: var(--s5);
+			border-radius: var(--r-xl);
+			background-color: #ffffff;
+			text-align: center;
+		}
+		.qr-wrap img { width: 372dp; height: 372dp; }
+		.qr-wrap .cap { color: #3a4150; font-size: var(--t-sm); font-weight: 600; margin-top: var(--s3); }
+		.qr-empty
+		{
+			width: 420dp;
+			height: 470dp;
+			border-radius: var(--r-xl);
+			border: 1.5dp var(--line);
+			background-color: var(--surface);
+			display: flex;
+			align-items: center;
+			justify-content: center;
+		}
+	</style>
+</head>
+<body class="solid" data-model="fluvi">
+	<div class="topbar">
+		<div class="wordmark">Fluvi<span class="dot">.</span></div>
+		<div class="right">
+			<button class="ghost" id="signin-settings" data-event-click="open_settings">Configurações</button>
+		</div>
+	</div>
+
+	<div class="stage enter">
+		<div class="copy">
+			<div class="eyebrow">XBOX REMOTE PLAY</div>
+			<h1>Entre com sua conta Microsoft</h1>
+			<div class="lead">Abra o endereço abaixo no celular ou no computador e digite o código. A janela continua sozinha quando o login terminar.</div>
+
+			<div class="code-card elev-2">
+				<div class="uri">{{ sign.uri_short }}</div>
+				<div class="code" data-if="sign.has_code">{{ sign.code }}</div>
+				<div class="code placeholder" data-if="!sign.has_code">····-····</div>
+				<div class="status" data-class-err="sign.error">
+					<div class="spinner" data-if="sign.busy"></div>
+					<span>{{ sign.status }}</span>
+				</div>
+			</div>
+
+			<div class="actions">
+				<button class="primary autofocus" id="signin-start" data-if="!sign.busy" data-event-click="sign_in">Entrar</button>
+				<button id="signin-cancel" data-if="sign.busy" data-event-click="cancel_sign_in">Cancelar</button>
+				<button class="ghost" id="signin-quit" data-event-click="quit">Sair</button>
+			</div>
+		</div>
+
+		<div class="qr-wrap elev-3" data-if="sign.has_qr">
+			<img data-attr-src="sign.qr"/>
+			<div class="cap">Aponte a câmera do celular</div>
+		</div>
+		<div class="qr-empty" data-if="!sign.has_qr">
+			<div class="spinner" data-if="sign.busy"></div>
+		</div>
+	</div>
+</body>
+</rml>

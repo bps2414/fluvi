@@ -1,0 +1,183 @@
+/* SPDX-License-Identifier: GPL-3.0-only */
+/* Fluvi visual system: dark theme, one accent (aqua), Inter. Sizes in dp, designed for 1920x1080 (dp ratio set by the app). */
+
+@font-face { font-family: "Inter"; src: "fonts/Inter-Regular.ttf", "fonts/Inter-Medium.ttf", "fonts/Inter-SemiBold.ttf", "fonts/Inter-Bold.ttf"; }
+@font-face { font-family: "Inter Display"; src: "fonts/InterDisplay-Bold.ttf"; }
+
+/* ---- Element defaults (RmlUi has no user-agent sheet) ---- */
+div, p, h1, h2, h3, section, header, footer { display: block; }
+span, em, strong { display: inline; }
+strong { font-weight: bold; }
+
+/* ---- Tokens ---- */
+body
+{
+	/* colour */
+	--accent:        #3fd9c8;
+	--accent-strong: #6ff0e1;
+	--accent-soft:   #3fd9c82e;
+	--accent-ink:    #04221f;
+	--bg:            #0a0c11;
+	--bg-raised:     #10131a;
+	--surface:       #ffffff0b;
+	--surface-hi:    #ffffff14;
+	--surface-press: #ffffff1f;
+	--line:          #ffffff14;
+	--line-hi:       #ffffff29;
+	--text:          #f1f3f7;
+	--text-2:        #a3abba;
+	--text-3:        #6c7485;
+	--danger:        #ff6b78;
+	--danger-soft:   #ff6b7824;
+	--glass:         #0d1017b8;
+	--glass-line:    #ffffff1c;
+
+	/* spacing */
+	--s1: 4dp;  --s2: 8dp;  --s3: 12dp; --s4: 16dp;
+	--s5: 24dp; --s6: 32dp; --s7: 48dp; --s8: 64dp; --s9: 96dp;
+
+	/* radius */
+	--r-sm: 8dp; --r-md: 14dp; --r-lg: 20dp; --r-xl: 28dp; --r-pill: 999dp;
+
+	/* type */
+	--t-xs: 14dp; --t-sm: 16dp; --t-md: 19dp; --t-lg: 24dp; --t-xl: 34dp; --t-2xl: 48dp; --t-hero: 96dp;
+
+	font-family: "Inter";
+	font-weight: normal;
+	font-size: var(--t-md);
+	color: var(--text);
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	padding: 0;
+}
+
+/* Full-bleed screens without a stream behind them. */
+body.solid
+{
+	background-color: var(--bg);
+	decorator: radial-gradient(circle 1100dp at 12% -10%, #3fd9c826, #3fd9c800),
+	           radial-gradient(circle 900dp at 100% 110%, #2f6bff1a, #2f6bff00),
+	           linear-gradient(180deg, #0c0f15, #07080c);
+}
+
+/* ---- Elevation ---- */
+.elev-1 { box-shadow: #00000059 0dp 2dp 8dp 0dp; }
+.elev-2 { box-shadow: #00000073 0dp 10dp 30dp 0dp; }
+.elev-3 { box-shadow: #0000008c 0dp 24dp 64dp 0dp; }
+
+/* ---- Typography ---- */
+.wordmark
+{
+	font-family: "Inter Display";
+	font-weight: bold;
+	font-size: var(--t-xl);
+	color: var(--text);
+}
+.wordmark .dot { color: var(--accent); }
+.eyebrow { font-size: var(--t-xs); font-weight: 600; color: var(--text-3); letter-spacing: 1.5dp; }
+h1 { font-family: "Inter Display"; font-weight: bold; font-size: var(--t-2xl); color: var(--text); }
+h2 { font-weight: 600; font-size: var(--t-lg); color: var(--text); }
+.muted { color: var(--text-2); }
+.faint { color: var(--text-3); }
+.error-text { color: var(--danger); }
+
+/* ---- Interactive elements: every one is focusable and navigable (wave 2 drives them with the D-pad) ---- */
+button, .card, .row, .seg, .toggle
+{
+	tab-index: auto;
+	nav: auto;
+	focus: auto;
+	cursor: pointer;
+}
+
+button
+{
+	display: inline-block;
+	box-sizing: border-box;
+	height: 52dp;
+	line-height: 52dp;
+	padding: 0dp var(--s5);
+	border-radius: var(--r-pill);
+	font-size: var(--t-sm);
+	font-weight: 600;
+	text-align: center;
+	color: var(--text);
+	background-color: var(--surface-hi);
+	border: 1.5dp var(--line);
+	transition: background-color color border-color transform 0.16s cubic-out;
+}
+button:hover { background-color: var(--surface-press); border-color: var(--line-hi); }
+button:focus-visible
+{
+	border-color: var(--accent);
+	background-color: var(--surface-press);
+	transform: scale(1.04);
+	box-shadow: #3fd9c84d 0dp 0dp 0dp 4dp;
+}
+button:active { transform: scale(0.97); }
+
+button.primary
+{
+	color: var(--accent-ink);
+	background-color: var(--accent);
+	border-color: var(--accent);
+}
+button.primary:hover { background-color: var(--accent-strong); border-color: var(--accent-strong); }
+button.primary:focus-visible { background-color: var(--accent-strong); border-color: #ffffff; }
+
+button.ghost { background-color: transparent; border-color: transparent; color: var(--text-2); }
+button.ghost:hover, button.ghost:focus-visible { color: var(--text); background-color: var(--surface); }
+button.ghost:focus-visible { border-color: var(--accent); }
+
+button.danger { color: var(--danger); background-color: var(--danger-soft); border-color: transparent; }
+button.danger:hover { background-color: #ff6b7838; }
+button.danger:focus-visible { border-color: var(--danger); box-shadow: #ff6b784d 0dp 0dp 0dp 4dp; }
+
+button.disabled, button.disabled:hover { opacity: 0.45; cursor: arrow; transform: none; }
+
+.keycap
+{
+	display: inline-block;
+	padding: 2dp 8dp;
+	margin: 0dp 4dp;
+	border-radius: 6dp;
+	border: 1dp var(--line-hi);
+	background-color: var(--surface);
+	font-size: var(--t-xs);
+	font-weight: 600;
+	color: var(--text-2);
+}
+
+/* ---- Top bar shared by the full screens ---- */
+.topbar
+{
+	position: absolute;
+	top: 0dp; left: 0dp; right: 0dp;
+	height: 96dp;
+	padding: 0dp var(--s8);
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: space-between;
+}
+.topbar .right { display: flex; flex-direction: row; align-items: center; gap: var(--s3); }
+
+/* ---- Spinner ---- */
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes pulse { from { opacity: 0.35; } to { opacity: 1; } }
+@keyframes rise { from { opacity: 0; transform: translateY(18dp); } to { opacity: 1; transform: translateY(0dp); } }
+@keyframes sheen { from { left: -40%; } to { left: 110%; } }
+
+.spinner
+{
+	display: inline-block;
+	width: 22dp;
+	height: 22dp;
+	border-radius: 11dp;
+	border: 3dp #ffffff26;
+	border-top-color: var(--accent);
+	animation: 0.9s spin infinite linear;
+}
+
+.enter { animation: 0.45s rise cubic-out; }
