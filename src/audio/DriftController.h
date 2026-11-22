@@ -9,9 +9,9 @@ namespace fluvi::audio {
 struct DriftConfig {
     double targetMs = 30;
     double maxPpm = 5000;          // +-0.5%: inaudible pitch change
-    double lpfTauSec = 0.5;        // smoothing of the fill measurement (packets arrive in 20 ms steps)
-    double kpPerMs = 300;          // ppm per ms of error
-    double kiPerMsSec = 30;        // ppm per (ms * s) of accumulated error
+    double lpfTauSec = 4.0;        // slow on purpose: a fast loop chased the fill-sampling alias (20 ms packets vs the render period) into a +-1000 ppm limit cycle
+    double kpPerMs = 40;           // ppm per ms of error
+    double kiPerMsSec = 1;         // ppm per (ms * s) of accumulated error
     double maxSlewPpmPerSec = 1000;
 };
 
