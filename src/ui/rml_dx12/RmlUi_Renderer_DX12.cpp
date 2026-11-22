@@ -7915,7 +7915,17 @@ ID3D12Resource* RenderInterface_DX12::TextureMemoryManager::Alloc_Texture(D3D12_
 #endif
 
 	// we need to pass full memory with mipmaps otherwise the DirectX API will validate it by its own. we must ensure what we do.
-	if (CanBePlacedResource(total_memory_for_allocation))
+	// Fluvi: the placed path allocates the driver's aligned size, which can exceed the placed limit even when the
+	// raw size fits ("you can't pass a such size here!" in fluvi.log). Decide on the 64 KB-aligned size instead.
+	bool placed = CanBePlacedResource(total_memory_for_allocation);
+	if (placed)
+	{
+		D3D12_RESOURCE_DESC probe = desc;
+		probe.Alignment = 0;
+		const D3D12_RESOURCE_ALLOCATION_INFO aligned = m_p_device->GetResourceAllocationInfo(0, 1, &probe);
+		placed = aligned.SizeInBytes != UINT64_MAX && aligned.SizeInBytes <= m_size_limit_for_being_placed;
+	}
+	if (placed)
 	{
 		Alloc_As_Placed(base_memory_size_for_allocation_in_bytes, total_memory_for_allocation, desc, p_impl, p_data);
 		p_result = static_cast<ID3D12Resource*>(p_impl->Get_Resource());

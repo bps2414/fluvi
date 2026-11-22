@@ -260,13 +260,15 @@ public:
         } else {
             FLUVI_WARN("gpu", "DRED settings unavailable");
         }
+        bool debugOn = false;
         if (desc.debugLayer) {
             ComPtr<ID3D12Debug> debug;
-            if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debug)))) debug->EnableDebugLayer();
+            if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debug)))) { debug->EnableDebugLayer(); debugOn = true; }
             else FLUVI_WARN("gpu", "D3D12 debug layer requested but not installed");
         }
 
-        if (FAILED(CreateDXGIFactory2(desc.debugLayer ? DXGI_CREATE_FACTORY_DEBUG : 0, IID_PPV_ARGS(&factory_)))) {
+        // The DXGI debug factory also needs Graphics Tools: without it CreateDXGIFactory2 fails outright.
+        if (FAILED(CreateDXGIFactory2(debugOn ? DXGI_CREATE_FACTORY_DEBUG : 0, IID_PPV_ARGS(&factory_)))) {
             status = Status::Fail("CreateDXGIFactory2 falhou");
             return false;
         }
@@ -297,7 +299,7 @@ public:
             return false;
         }
         FLUVI_INFO("gpu", "adapter: {} ({} 0x{:04X}), {} MB VRAM, debug layer {}", Narrow(info_.name),
-                   VendorName(info_.vendor), info_.deviceId, info_.dedicatedVideoMemory >> 20, desc.debugLayer);
+                   VendorName(info_.vendor), info_.deviceId, info_.dedicatedVideoMemory >> 20, debugOn);
         device_->SetName(L"fluvi.device");
 
         if (desc.debugLayer) {

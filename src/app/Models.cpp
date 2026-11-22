@@ -90,12 +90,20 @@ std::string DescribeError(const std::exception& error) {
     return std::format("Algo deu errado: {}", error.what());
 }
 
+// Known failures get plain text; the raw server code and message go to the log (StreamController), not the screen.
 std::string DescribeSessionFailure(const std::string& errorCode, const std::string& errorMessage) {
+    const auto has = [&](const char* s) { return errorCode.find(s) != std::string::npos || errorMessage.find(s) != std::string::npos; };
+    // The console is not registered with the push service: off (energy saving), still booting, or remote features off.
+    if (has("WNSError") || has("WaitingForServerToRegister") || has("ErrorCallingWNS"))
+        return "O console não respondeu. Se ele estava desligado ou acabou de ligar, espere um minuto e tente de novo. "
+               "No console, deixe o modo de energia em \"Suspensão\" e ative \"Habilitar recursos remotos\".";
+    if (has("Busy") || has("AlreadyInSession") || has("InUse"))
+        return "O console já está transmitindo para outro aparelho. Feche a outra sessão e tente de novo.";
+    if (has("Timeout") || has("TimedOut"))
+        return "O console demorou demais para responder. Tente de novo.";
     std::string s = "O console recusou a sessão";
     if (!errorCode.empty()) s += std::format(" (código {})", errorCode);
-    s += ".";
-    if (!errorMessage.empty()) s += " " + errorMessage;
-    return s;
+    return s + ". Tente de novo em alguns segundos.";
 }
 
 std::string DescribeEnded(const std::string& reason) {

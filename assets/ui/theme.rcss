@@ -25,7 +25,8 @@
 
    Components: .topbar (+ .right), .brand (.large), .hints (bottom-left key hints) + .keycap, button (.primary .ghost
    .danger .disabled), .notice (failure banner), .lead .muted .faint .label-brand, .rule-brand, .spinner, .switch (.on)
-   + .knob, .meter + .fill, .live (+ .led), .led (.alive), .arrive (one entrance per screen), body.solid (app background).
+   + .knob, .meter + .fill, .live (+ .led), .led (.alive), .arrive (one entrance per screen), body.solid (app background),
+   scrollbars (thin thumb; required for any overflow: auto box).
    Focusables: button .tile .row .seg .toggle get tab-index/nav/focus here; focus = brand border + --glow-focus.
 
    Skeletons (loading states): put the real layout in place with placeholder shapes, shown with data-if on a model
@@ -203,6 +204,27 @@ h2 { font-weight: 600; font-size: var(--t-lg); color: var(--foam); }
 .faint { color: var(--silt); }
 .label-brand { font-weight: 600; color: var(--brand); }
 .rule-brand { height: 2dp; decorator: linear-gradient(90deg, var(--brand-rule), var(--brand-clear)); }
+
+/* ---- Scrollbars: RmlUi needs them sized, or an unstyled vertical bar takes the whole content width and every
+   child of an overflow: auto box shrinks to nothing. A thin rounded thumb, no track, no arrows. ---- */
+scrollbarvertical { width: var(--s1h); margin-left: var(--s2); }
+scrollbarhorizontal { height: var(--s1h); margin-top: var(--s2); }
+scrollbarvertical slidertrack, scrollbarhorizontal slidertrack { background-color: transparent; }
+scrollbarvertical slidertrack, scrollbarvertical sliderbar { width: var(--s1h); }
+scrollbarvertical sliderbar { min-height: var(--s7); }
+scrollbarhorizontal slidertrack, scrollbarhorizontal sliderbar { height: var(--s1h); }
+scrollbarhorizontal sliderbar { min-width: var(--s7); }
+scrollbarvertical sliderbar, scrollbarhorizontal sliderbar
+{
+	border-radius: var(--r-pill);
+	background-color: var(--water-hi);
+	transition: background-color var(--d-fast) cubic-out;
+}
+scrollbarvertical sliderbar:hover, scrollbarvertical sliderbar:active,
+scrollbarhorizontal sliderbar:hover, scrollbarhorizontal sliderbar:active { background-color: var(--silt); }
+scrollbarvertical sliderarrowdec, scrollbarvertical sliderarrowinc { width: 0dp; height: 0dp; }
+scrollbarhorizontal sliderarrowdec, scrollbarhorizontal sliderarrowinc { width: 0dp; height: 0dp; }
+scrollbarcorner { width: 0dp; height: 0dp; }
 
 /* ---- Interactive elements: all focusable and D-pad navigable ---- */
 button, .tile, .row, .seg, .toggle

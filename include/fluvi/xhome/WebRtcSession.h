@@ -94,6 +94,7 @@ private:
     bool sendMessageJson(const std::string& text);
     bool sendControl(const std::string& text);
     bool sendClientConfig();
+    void sendInputReport();   // the input channel's client metadata report, once (after the handshake ack and input open)
     bool sendBinary(const std::shared_ptr<rtc::DataChannel>& channel, const uint8_t* data, size_t size);
     void sendFailure(const std::exception& error);
     double nowMs() const;
@@ -111,7 +112,8 @@ private:
     std::shared_ptr<rtc::DataChannel> chat_, control_, input_, message_;
     std::mutex mutex_;
     std::condition_variable changed_;
-    std::atomic<bool> connected_{false}, failed_{false}, closed_{false}, handshakeDone_{false}, handshakeSent_{false}, resolutionSent_{false};
+    std::atomic<bool> connected_{false}, failed_{false}, closed_{false}, handshakeDone_{false}, handshakeSent_{false}, resolutionSent_{false},
+                      handshakeAcked_{false}, inputReportSent_{false};
     std::atomic<uint32_t> inputSequence_{0};
     std::atomic<uint64_t> videoUnits_{0}, audioPackets_{0}, keyframeRequests_{0}, videoBytes_{0};
     int64_t originQpc_ = 0;

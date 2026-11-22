@@ -344,6 +344,9 @@ TEST_CASE("models: connect stages and error sentences") {
     CHECK(DescribeError(xhome::ServiceError(429, "", "x")).find("429") != std::string::npos);
     CHECK(DescribeError(std::runtime_error("boom")).find("boom") != std::string::npos);
     CHECK(DescribeSessionFailure("0x87E10BC6", "sem espaço").find("0x87E10BC6") != std::string::npos);
+    const std::string wns = DescribeSessionFailure("WNSError", "Xccs : ErrorCallingWNS : Send command failed : State WaitingForServerToRegister");
+    CHECK(wns.find("Suspensão") != std::string::npos);
+    CHECK(wns.find("WNS") == std::string::npos);
     CHECK(DescribeEnded("connection lost") == "A conexão com o console caiu.");
     CHECK_FALSE(DescribeSignInFailure(xhome::SignInPoll::Expired, "").empty());
     CHECK(DescribeSignInFailure(xhome::SignInPoll::Pending, "").empty());

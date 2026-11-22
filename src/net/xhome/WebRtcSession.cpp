@@ -124,14 +124,14 @@ bool WebRtcSession::start(Signaling& signaling, const StreamConfig& config, std:
     input_ = channel("input", "1.0");
     message_ = channel("message", "messageV1");
 
-    // The handshake starts once every channel is open: its acknowledgement triggers sends on control and
-    // input, which would be dropped by a channel still opening.
+    // The handshake goes out once message and control are open (its acknowledgement sends on control). It must
+    // not wait for chat or input: the console may only acknowledge those after the handshake, and waiting for all
+    // four stalled the session ("conectou, mas não terminou de abrir"). Input's metadata report follows its open.
     const auto maybeHandshake = [this, gate = gate_] {
         std::lock_guard callbackLock(gate->mutex); if (!gate->open) return;
-        if (!message_ || !control_ || !input_ || !chat_) return;
-        if (!message_->isOpen() || !control_->isOpen() || !input_->isOpen() || !chat_->isOpen()) return;
+        if (!message_ || !control_ || !message_->isOpen() || !control_->isOpen()) return;
         if (handshakeSent_.exchange(true)) return;
-        FLUVI_INFO("xhome", "data channels open; sending handshake");
+        FLUVI_INFO("xhome", "message and control open; sending handshake");
         sendMessageJson(json{{"type", "Handshake"}, {"version", "messageV1"}, {"id", "be0bfc6d-1e83-4c8a-90ed-fa8601c5a179"}, {"cv", "0"}}.dump());
     };
     // PR #1752 wraps the control channel's start(): as soon as it opens, before the message handshake,
@@ -144,8 +144,18 @@ bool WebRtcSession::start(Signaling& signaling, const StreamConfig& config, std:
                           sendControl(userRequestedResolutionUpdateMessage(config_.height));
         FLUVI_INFO("xhome", "requested {}x{} on the control channel ({})", config_.width, config_.height, sent ? "sent" : "NOT sent");
     };
-    for (const auto& dc : {chat_, input_, message_}) dc->onOpen(maybeHandshake);
+    chat_->onOpen([] { FLUVI_INFO("xhome", "channel chat open"); });
+    message_->onOpen([maybeHandshake] {
+        FLUVI_INFO("xhome", "channel message open");
+        maybeHandshake();
+    });
+    input_->onOpen([this, gate = gate_] {
+        FLUVI_INFO("xhome", "channel input open");
+        std::lock_guard callbackLock(gate->mutex); if (!gate->open) return;
+        if (handshakeAcked_) sendInputReport();
+    });
     control_->onOpen([sendResolution, maybeHandshake] {
+        FLUVI_INFO("xhome", "channel control open");
         sendResolution();
         maybeHandshake();
     });
@@ -258,6 +268,12 @@ bool WebRtcSession::sendControl(const std::string& text) {
     return sendBinary(control_, reinterpret_cast<const uint8_t*>(text.data()), text.size());
 }
 
+void WebRtcSession::sendInputReport() {
+    if (inputReportSent_.exchange(true)) return;
+    const auto report = clientMetadataReport(0, nowMs(), 1);
+    if (!sendBinary(input_, report.data(), report.size())) inputReportSent_ = false;
+}
+
 bool WebRtcSession::sendClientConfig() {
     bool sent = true;
     sent &= sendMessageJson(message("/streaming/systemUi/configuration", {{"version", {0, 2, 0}}, {"systemUis", json::array()}}));
@@ -283,11 +299,10 @@ void WebRtcSession::onMessageChannel(const std::string& text) {
         initialized &= sendControl(json{{"message", "gamepadChanged"}, {"gamepadIndex", 0}, {"wasAdded", true}}.dump());
         initialized &= sendControl(json{{"message", "gamepadChanged"}, {"gamepadIndex", 0}, {"wasAdded", false}}.dump());
         initialized &= sendControl(json{{"message", "gamepadChanged"}, {"gamepadIndex", 0}, {"wasAdded", true}}.dump());
-        if (input_ && input_->isOpen()) {
-            const auto report = clientMetadataReport(0, nowMs(), 1);
-            initialized &= sendBinary(input_, report.data(), report.size());
-        }
+        handshakeAcked_ = true;
+        if (input_ && input_->isOpen()) sendInputReport();   // else input's onOpen sends it
         initialized &= sendClientConfig();
+        if (!initialized) FLUVI_WARN("xhome", "handshake acknowledged but a set-up message was not sent");
         handshakeDone_ = initialized;
         changed_.notify_all();
         return;

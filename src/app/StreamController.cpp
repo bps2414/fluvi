@@ -150,7 +150,11 @@ private:
                 if (Clock::now() > deadline) { fail("O console demorou demais para ficar pronto. Tente de novo."); goto cleanup; }
                 const xhome::SessionState st = api->state(sessionId);
                 if (st.state == "Provisioned") break;
-                if (st.state == "Failed") { fail(DescribeSessionFailure(st.errorCode, st.errorMessage)); goto cleanup; }
+                if (st.state == "Failed") {
+                    FLUVI_WARN("app", "session failed on the server: {} {}", st.errorCode, st.errorMessage);
+                    fail(DescribeSessionFailure(st.errorCode, st.errorMessage));
+                    goto cleanup;
+                }
                 if (st.state == "ReadyToConnect" && !connectSent) {
                     if (Live(*a) && events.stage) events.stage(StreamStage::ReadyToConnect);
                     api->connect(sessionId, deps_.transferToken());
@@ -182,7 +186,7 @@ private:
                     goto cleanup;
                 }
                 if (!Live(*a)) goto cleanup;
-                if (!rtc->waitReady(10s)) { fail("O console conectou, mas não terminou de abrir a sessão. Tente de novo."); goto cleanup; }
+                if (!rtc->waitReady(10s)) { fail("A conexão com o console abriu, mas a transmissão não começou. Tente de novo; se repetir, reinicie o console."); goto cleanup; }
                 rtc->requestKeyframe();
 
                 // HOOK(chain): the decoder and the QualityChain are created here by the main session.

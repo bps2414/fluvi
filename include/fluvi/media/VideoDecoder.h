@@ -94,7 +94,10 @@ using DecodedFramePtr = std::shared_ptr<const DecodedFrame>;
 struct RepeatDetectConfig {
     uint32_t pixelDelta = 32;      // |dY| (0..255) that counts a luma sample as changed (AMF refinement stays <= ~26)
     uint32_t changedPixels = 4;    // samples per 16x16 tile for the tile to count as changed
-    uint32_t changedTiles = 1;     // tiles for the picture to count as new
+    // Tiles for the picture to count as new. Measured on the RX 6600 (d3d12va, dup720p): a repeated picture still
+    // differs in 0-4 tiles (encoder refinement, |dY| up to 114, so pixelDelta cannot separate it) and a new one in
+    // 114+. A change smaller than 8 tiles (a blinking cursor) counts as a repeat.
+    uint32_t changedTiles = 8;
 };
 
 struct VideoDecoderDesc {

@@ -14,18 +14,18 @@
 		{
 			position: absolute;
 			top: 168dp; bottom: 0dp; left: var(--margin); right: var(--s8);
-			display: flex;
-			flex-direction: row;
-			gap: var(--s9);
 		}
 
-		.side { width: 400dp; }
+		.side { position: absolute; top: 0dp; left: 0dp; width: 400dp; }
 		.side .lead { margin-top: var(--s4); font-size: var(--t-md); }
 		.side .back { margin-top: var(--s6); }
 
+		/* The rows used to shrink to their padding: the scrollbar had no style (fixed in theme.rcss) and took the
+		   list's whole width. left = .side width + --s9. */
 		.list
 		{
-			flex: 1;
+			position: absolute;
+			top: 0dp; bottom: 0dp; left: 496dp; right: 0dp;
 			max-width: 1000dp;
 			overflow-y: auto;
 			padding: var(--s1) var(--s4) var(--s9) var(--s1);
@@ -49,7 +49,8 @@
 		}
 		.row:hover { background-color: var(--water-hi); }
 		.row:focus-visible { border-color: var(--brand); background-color: var(--water-hi); box-shadow: var(--glow-row); }
-		.row .label { flex: 1; padding-right: var(--s5); }
+		.row .label { flex: 1 1 auto; min-width: 0dp; padding-right: var(--s5); }
+		.row .stepper, .row .switch { flex: 0 0 auto; }
 		.row .label .t { font-weight: 600; font-size: var(--t-md); }
 		.row .label .d { font-size: var(--t-xs); color: var(--silt); margin-top: var(--s0); }
 

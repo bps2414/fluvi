@@ -285,12 +285,19 @@ private:
         recovery_.picture();
         for (const auto& m : metas_) if (m.pts == latest->pts) { meta = m; break; }
         auto out = Output(latest, meta);
-        av_frame_free(&latest);
+        // Keep the last kHeldFrames pictures referenced so FFmpeg's surfaces rotate through a large set. AMD needs
+        // d3d12va's reference-only allocations; in FFmpeg n9.0 a slot is freed only when its surface leaves the
+        // decoder's texture->index map, which never happens with 2-4 recycling surfaces: after max_num_ref + 1 (17)
+        // pictures it fails with "No space for new Reference frame!". 20 held (> 17) decodes 600/600 on the RX 6600.
+        // Cost: ~20 NV12 surfaces (~110 MB at 1440p). Drop this when the FFmpeg build reuses slots by surface.
+        held_.push_back(latest);
+        while (held_.size() > kHeldFrames) { av_frame_free(&held_.front()); held_.pop_front(); }
         return out;
     }
 
     // ---- recovery --------------------------------------------------------------------------------------------
     void EnterRecovery() {
+        ReleaseHeld();
         if (ctx_) avcodec_flush_buffers(ctx_);
         metas_.clear();
         waitingKey_ = true;
@@ -396,7 +403,8 @@ private:
         return true;
     }
 
-    void CloseCodec() { if (ctx_) avcodec_free_context(&ctx_); }
+    void ReleaseHeld() { for (AVFrame*& f : held_) av_frame_free(&f); held_.clear(); }
+    void CloseCodec() { ReleaseHeld(); if (ctx_) avcodec_free_context(&ctx_); }
 
     // ---- GPU -------------------------------------------------------------------------------------------------
     bool CreateBuffer(D3D12_HEAP_TYPE heap, uint64_t size, bool uav, ComPtr<ID3D12Resource>* out) {
@@ -699,6 +707,8 @@ private:
     int64_t lastKeyframeRequest_ = 0;
     int64_t ptsCounter_ = 0;
     std::deque<Meta> metas_;
+    static constexpr size_t kHeldFrames = 20;
+    std::deque<AVFrame*> held_;   // decoded pictures kept referenced (see Decode)
     h264::Parser parser_;
     h264::FrameNumTracker frameNums_;
     xhome::VideoDecodeRecovery recovery_;
