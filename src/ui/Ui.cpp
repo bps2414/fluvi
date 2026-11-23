@@ -346,6 +346,8 @@ private:
     bool modeKnown_ = false;
     uint32_t width_ = 0, height_ = 0;
     std::chrono::steady_clock::time_point idleSince_{};
+    std::chrono::steady_clock::time_point toastUntil_{};   // mode-change notice in the corner
+    bool toastCorner_ = false;                             // the corner is on only because of that notice
     bool idle_ = false, skipRecord_ = false;
     bool pointerInput_ = false;   // last input was the mouse: do not pull focus back to autofocus
 
@@ -604,6 +606,7 @@ bool UiImpl::BuildModel() {
     });
     on("toggle_corner", [this](Args) {
         stream_.corner = !stream_.corner;
+        toastCorner_ = false;
         model_.DirtyVariable("stream");
     });
     on("disconnect", [this](Args) { if (cb_.disconnect) cb_.disconnect(); });
@@ -685,6 +688,7 @@ bool UiImpl::HandleMessage(HWND, UINT msg, WPARAM wParam, LPARAM lParam) {
             if ((lParam & (1 << 30)) == 0) Enqueue({InputEvent::Kind::Hotkey, static_cast<int>(Hotkey::ToggleOverlay)});
             return true;
         }
+        if (vk == hkMode_.load() && screen != Screen::Stream) FLUVI_INFO("ui", "mode key ignored: not on the stream screen");
         if (screen == Screen::Stream && vk == hkMode_.load()) {
             if ((lParam & (1 << 30)) == 0) Enqueue({InputEvent::Kind::Hotkey, static_cast<int>(Hotkey::ToggleMode)});
             return true;
@@ -780,6 +784,11 @@ void UiImpl::OnHotkey(Hotkey key) {
 
 void UiImpl::SetMode(StreamMode mode) {
     const bool changed = mode != mode_;
+    if (changed && screen_.load() == Screen::Stream) {
+        // Visible feedback without blocking the pad: the corner line (it names the mode) shows for 2 s.
+        if (!stream_.corner) { stream_.corner = true; toastCorner_ = true; }
+        toastUntil_ = std::chrono::steady_clock::now() + std::chrono::seconds(2);
+    }
     mode_ = mode;
     modeKnown_ = true;
     FillStreamFlags();
@@ -825,6 +834,11 @@ void UiImpl::Update() {
         ApplyScreen();   // a click may switch screens; later events go to the new one
     }
 
+    if (toastCorner_ && std::chrono::steady_clock::now() >= toastUntil_) {
+        toastCorner_ = false;
+        stream_.corner = false;
+        if (model_) model_.DirtyVariable("stream");
+    }
     // Idle on the stream: nothing visible once the fade-out is over, so Record() can skip the whole UI pass.
     const bool idle = screen_.load() == Screen::Stream && !overlay_.load() && !stream_.corner;
     const auto now = std::chrono::steady_clock::now();

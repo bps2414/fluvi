@@ -241,6 +241,23 @@ bool WebRtcSession::start(Signaling& signaling, const StreamConfig& config, std:
     std::unique_lock lock(mutex_);
     if (!changed_.wait_for(lock, timeout, [&] { return connected_.load() || failed_.load(); }) || !connected_)
         return fail(failed_ ? "the connection to the console failed (network or firewall)" : "timed out connecting to the console");
+    lock.unlock();
+    // Which path won: the console's LAN address (host, private IP) is the low-latency one; a public/Teredo address
+    // means the stream goes out to the internet and back.
+    rtc::Candidate localPair, remotePair;
+    if (pc_->getSelectedCandidatePair(&localPair, &remotePair)) {
+        const auto kind = [](const rtc::Candidate& c) {
+            switch (c.type()) {
+            case rtc::Candidate::Type::Host: return "host";
+            case rtc::Candidate::Type::ServerReflexive: return "srflx";
+            case rtc::Candidate::Type::PeerReflexive: return "prflx";
+            case rtc::Candidate::Type::Relayed: return "relay";
+            default: return "?";
+            }
+        };
+        FLUVI_INFO("xhome", "ICE path: local {} {}:{} -> console {} {}:{}", kind(localPair), localPair.address().value_or("?"),
+                   localPair.port().value_or(0), kind(remotePair), remotePair.address().value_or("?"), remotePair.port().value_or(0));
+    }
     return true;
 }
 
