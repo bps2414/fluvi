@@ -1,11 +1,12 @@
 @echo off
-rem Runs a command inside the MSVC x64 environment, with the bundled CMake/Ninja on PATH.
+rem Runs a command inside the MSVC x64 environment, with the CMake and Ninja bundled with Visual Studio on PATH.
 rem   scripts\dev.cmd cmake --preset debug
 rem   scripts\dev.cmd cmake --build build\debug
-rem   scripts\dev.cmd cmake -S . -B build\agent-a -G Ninja ... (see CMakePresets.json for the cache vars)
-call "D:\Bryan\Dev\Tools\VSBuildTools\VC\Auxiliary\Build\vcvars64.bat" >nul || exit /b 1
-set "PATH=D:\Bryan\Dev\Tools\VSBuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin;D:\Bryan\Dev\Tools\VSBuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja;%PATH%"
-set "VCPKG_DOWNLOADS=D:\Bryan\Dev\Caches\vcpkg\downloads"
-set "VCPKG_DEFAULT_BINARY_CACHE=D:\Bryan\Dev\Caches\vcpkg\archives"
-set "X_VCPKG_REGISTRIES_CACHE=D:\Bryan\Dev\Caches\vcpkg\registries"
+rem Machine-specific settings (FLUVI_VS, VCPKG_ROOT, vcpkg cache variables) go in scripts\dev.local.cmd (not tracked).
+if exist "%~dp0dev.local.cmd" call "%~dp0dev.local.cmd"
+if not defined FLUVI_VS for /f "usebackq delims=" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do set "FLUVI_VS=%%i"
+if not defined FLUVI_VS (echo Visual Studio with the C++ tools was not found. Set FLUVI_VS in scripts\dev.local.cmd. & exit /b 1)
+call "%FLUVI_VS%\VC\Auxiliary\Build\vcvars64.bat" >nul || exit /b 1
+if not defined VCPKG_ROOT set "VCPKG_ROOT=%FLUVI_VS%\VC\vcpkg"
+set "PATH=%FLUVI_VS%\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin;%FLUVI_VS%\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja;%PATH%"
 %*

@@ -6,18 +6,13 @@
       "hidden": true,
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/${presetName}",
-      "toolchainFile": "D:/Bryan/Dev/Tools/VSBuildTools/VC/vcpkg/scripts/buildsystems/vcpkg.cmake",
-      "environment": {
-        "VCPKG_DOWNLOADS": "D:/Bryan/Dev/Caches/vcpkg/downloads",
-        "VCPKG_DEFAULT_BINARY_CACHE": "D:/Bryan/Dev/Caches/vcpkg/archives",
-        "X_VCPKG_REGISTRIES_CACHE": "D:/Bryan/Dev/Caches/vcpkg/registries"
-      },
+      "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
       "cacheVariables": {
         "CMAKE_C_COMPILER": "cl",
         "CMAKE_CXX_COMPILER": "cl",
         "VCPKG_TARGET_TRIPLET": "x64-windows-static-md",
         "VCPKG_INSTALLED_DIR": "${sourceDir}/build/vcpkg_installed",
-        "VCPKG_INSTALL_OPTIONS": "--x-buildtrees-root=D:/Bryan/Dev/Caches/vcpkg/buildtrees;--x-packages-root=D:/Bryan/Dev/Caches/vcpkg/packages",
+        "VCPKG_INSTALL_OPTIONS": "$env{FLUVI_VCPKG_INSTALL_OPTIONS}",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
       }
     },
