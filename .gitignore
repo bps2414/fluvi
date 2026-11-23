@@ -1,5 +1,26 @@
+# Build output
 /build/
-/third_party/fidelityfx/
 /out/
-*.user
+/CMakeUserPresets.json
+
+# Downloaded by scripts/fetch-deps.ps1
+/third_party/fidelityfx/
+
+# Local reference copies (upstream sources, not compiled)
+/third_party/veyra-import/
+/third_party/rmlui-backends/
+
+# Machine-specific settings
+/scripts/dev.local.cmd
+
+# Personal notes and agent state
+/PLANO.md
+PROGRESSO.md
+/CLAUDE.local.md
+/.claude/settings.local.json
+
+# Editors
 .vs/
+.vscode/
+.idea/
+*.user
