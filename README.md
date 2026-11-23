@@ -1,247 +1,184 @@
 <div align="center">
 
-# 🌊 Fluvi
+# Fluvi
 
-**Remote Play do Xbox Series X no PC, nativo, leve e mais bonito que o original.**
+**A native, lightweight Xbox Remote Play client for Windows, with a better picture than the official app.**
 
-Stream em 1440p, limpeza e nitidez na GPU, frame generation e input lag baixo,<br>
-num app de ~100 MB em C++20 e Direct3D 12. Sem Electron e sem navegador no meio.
+1440p streaming, GPU cleanup and sharpening, frame generation and low input lag,<br>
+in a ~100 MB C++20 / Direct3D 12 app. No Electron, no browser in the middle.
 
-![status](https://img.shields.io/badge/status-onda%201%20em%20andamento-orange)
+![status](https://img.shields.io/badge/status-early%20development-orange)
 ![lang](https://img.shields.io/badge/C%2B%2B-20-blue)
 ![api](https://img.shields.io/badge/Direct3D-12-green)
-![gpu](https://img.shields.io/badge/alvo%20v1-AMD%20RX%206600-red)
-![license](https://img.shields.io/badge/licen%C3%A7a-GPL--3.0-lightgrey)
+![license](https://img.shields.io/badge/license-GPL--3.0-lightgrey)
 
 </div>
 
 ---
 
-## O que é
+## What it is
 
-O Fluvi conecta no **seu** Xbox de casa (Remote Play / xHome, **não** é xCloud) e mostra o jogo no PC. Ele melhora
-o que o app oficial e os clientes abertos entregam:
+Fluvi connects to **your own** Xbox at home (Remote Play / xHome, **not** xCloud) and plays it on your PC. It improves
+on what the official app and the open clients deliver:
 
-| | App oficial | XStreaming / Greenlight | Veyra | **Fluvi** |
+| | Official app | XStreaming / Greenlight | Veyra | **Fluvi** |
 |---|---|---|---|---|
-| Resolução do stream | até 1440p | até 1080p | 1080p fixo | **1440p** (reduzido pra 1080p no seu monitor) |
-| Bitrate configurável | ❌ | ✅ | ❌ | ✅ |
-| Limpeza de compressão + nitidez | ❌ | ❌ | ✅ | ✅ |
-| Frame generation (30→60) | ❌ | ❌ | ✅ (sem descartar frames repetidos no Xbox) | ✅ **com** descarte |
-| Pronto pro Lossless Scaling | ❌ | ❌ | ❌ | ✅ opção "só frames novos" |
-| Controle enviado na hora | ? | a cada 16 ms | ✅ | ✅ ~1000 Hz |
-| Tamanho | loja | ~150 MB (Electron) | ~1,5 GB | **~100 MB** |
+| Stream resolution | up to 1440p | up to 1080p | 1080p | **1440p** (downscaled to your monitor) |
+| Configurable bitrate | ❌ | ✅ | ❌ | ✅ |
+| Compression cleanup + sharpening | ❌ | ❌ | ✅ | ✅ |
+| Frame generation (30→60) | ❌ | ❌ | ✅ (no duplicate-frame removal) | ✅ **with** removal |
+| Ready for Lossless Scaling | ❌ | ❌ | ❌ | ✅ "new frames only" option |
+| Input sent immediately | ? | every 16 ms | ✅ | ✅ ~1000 Hz |
+| Size | Store app | ~150 MB (Electron) | ~1.5 GB | **~100 MB** |
 
-## Os modos
+## Modes
 
-Um jogo travado em 30 fps (GTA 6) chega no stream a 60 Hz, com **cada frame repetido**. O Fluvi sabe disso:
+A game locked to 30 fps arrives in the stream at 60 Hz with **every frame repeated**. Fluvi knows that:
 
-| Modo | Pra quê | Lag extra |
+| Mode | For | Extra lag |
 |---|---|---|
-| 🎮 **Jogar** | o menor lag possível, com toda a melhoria de imagem | ~0 |
-| 🎮 **Jogar** + *"Mostrar só frames novos"* | entregar 30 frames reais e limpos pro **Lossless Scaling** gerar os 60 | o do Lossless |
-| 🌊 **Liso** | FG próprio de 30→60, com refino de movimento e HUD travado | ~36–41 ms |
+| **Play** | the lowest lag, with every image improvement | ~0 |
+| **Play** + *"new frames only"* | hand 30 real, clean frames to **Lossless Scaling** to generate 60 | Lossless's own |
+| **Smooth** | built-in 30→60 FG with motion refinement and HUD lock | ~36–41 ms |
 
-Troca de modo por tecla, no meio do jogo.
+Switch modes with a hotkey, mid-game.
 
-> **Por que o FG sempre soma lag?** Pra inventar o frame do meio, é preciso **esperar o próximo frame real**
-> (33 ms num jogo de 30). Isso vale pra qualquer FG por interpolação: Lossless, AFMF, Veyra, Fluvi.
+> **Why does FG always add lag?** To invent the frame in between, you must **wait for the next real frame** (33 ms in
+> a 30 fps game). That holds for any interpolating FG: Lossless, AFMF, Veyra, Fluvi.
 
 ---
 
-## Como funciona
+## How it works
 
-### O caminho de um frame
+### The path of a frame
 
 ```mermaid
 flowchart LR
-    subgraph XBOX["🎮 Xbox Series X"]
-        G[jogo] --> E[encoder H.264]
+    subgraph XBOX["Xbox Series X|S"]
+        G[game] --> E[H.264 encoder]
     end
-    E -- "RTP / WebRTC<br>(cabo)" --> N
+    E -- "RTP / WebRTC" --> N
 
-    subgraph PC["💻 Fluvi no PC"]
-        N["net/xhome<br>recebe pacotes"] --> M["media<br>decode d3d12va<br>+ descarta repetidos"]
+    subgraph PC["Fluvi on the PC"]
+        N["net/xhome<br>receive packets"] --> M["media<br>d3d12va decode<br>+ drop repeats"]
         M --> P["gpu/pipeline<br>NV12→RGB · deblock<br>1440→1080 · RCAS"]
-        P --> F{"modo<br>Liso?"}
-        F -- sim --> FG["gpu/fg<br>optical flow + refino<br>FSR 3.1 FG"]
-        F -- não --> U
+        P --> F{"Smooth<br>mode?"}
+        F -- yes --> FG["gpu/fg<br>optical flow + refine<br>FSR 3.1 FG"]
+        F -- no --> U
         FG --> U["ui<br>RmlUi overlay"]
-        U --> S["gpu/present<br>relógio próprio + VRR"]
+        U --> S["gpu/present<br>own clock + VRR"]
     end
-    S --> MON["🖥️ monitor 165 Hz<br>FreeSync"]
+    S --> MON["monitor<br>VRR"]
 
-    PAD["🕹️ controle"] --> I["input<br>~1000 Hz"] -- "canal input" --> XBOX
-    E -. "Opus" .-> A["audio<br>WASAPI"] --> SP["🔊"]
+    PAD["gamepad"] --> I["input<br>~1000 Hz"] -- "input channel" --> XBOX
+    E -. "Opus" .-> A["audio<br>WASAPI"] --> SP["speakers"]
 ```
 
-### As ideias que fazem diferença
+### The ideas that matter
 
-- **🗑️ Fila que joga fora o velho** (`LatestQueue`): se alguma etapa atrasar, o frame antigo é descartado e
-  nunca acumula. Atraso não vira fila.
-- **⏱️ Relógio próprio de apresentação** (`PresentClock`): o app decide o instante exato de mostrar cada frame,
-  real ou gerado, com espaçamento igual e FreeSync. É o segredo de fluidez herdado do Veyra.
-- **🔁 Descarte de frames repetidos:** num jogo de 30, metade do stream é cópia. O FG nunca interpola entre dois
-  frames iguais.
-- **🧭 Movimento de qualidade sem dados do jogo:** vídeo não tem vetores de movimento da engine, então o optical
-  flow estima o movimento e os shaders `Flow*` corrigem as bordas e o fundo que aparece atrás dos objetos (tira a
-  "gelatina").
-- **📐 1440p num monitor 1080p:** pedir mais resolução e reduzir no PC (supersampling) deixa a imagem mais nítida
-  e dilui os blocos de compressão.
-- **🖥️ Independent Flip + VRR:** a imagem vai direto pro monitor, sem passar pela composição do Windows, e o
-  overlay mostra se isso está acontecendo.
+- **A queue that drops the old** (`LatestQueue`): if a stage falls behind, the stale frame is discarded instead of
+  piling up. Delay never becomes a queue.
+- **Own presentation clock** (`PresentClock`): the app decides the exact moment each frame, real or generated, is
+  shown, evenly spaced and VRR-aware.
+- **Duplicate-frame removal:** in a 30 fps game, half the stream is copies. FG never interpolates between two
+  identical frames.
+- **Motion without game data:** video has no engine motion vectors, so optical flow estimates the motion and the
+  `Flow*` shaders fix edges and disocclusions (no "jelly").
+- **1440p on a 1080p monitor:** requesting more resolution and downscaling on the PC (supersampling) sharpens the
+  image and dilutes compression blocks.
+- **Independent Flip + VRR:** the image goes straight to the display, bypassing Windows composition, and the
+  overlay shows whether that is happening.
 
 ---
 
-## Estrutura
+## Repository layout
 
 ```
 fluvi/
-├─ PLANO.md                 📘 plano completo (fonte da verdade)
-├─ README.md                📄 este arquivo
-├─ CMakeLists.txt           🔧 como montar o projeto
-├─ CMakePresets.json           presets debug/release (Ninja + MSVC + vcpkg)
-├─ vcpkg.json               📦 bibliotecas de terceiros
-├─ cmake/Fluvi.cmake           regras comuns (avisos, flags)
-├─ scripts/
-│   ├─ dev.cmd                 abre o ambiente do compilador e roda um comando
-│   └─ fetch-deps.ps1          baixa o AMD FidelityFX SDK 2.4
-│
-├─ include/fluvi/           📜 CONTRATOS: o que cada módulo oferece
-│   ├─ core/                   log, relógio, Status, LatestQueue
-│   ├─ common/                 Gamepad, Settings, Stats
-│   ├─ gpu/                    Device, Texture, SwapChain, PresentClock, Passes, FlowPasses
-│   ├─ xhome/                  Account, StreamApi, WebRtcSession, Protocol, Sdp, StreamConfig...
-│   ├─ input/                  GamepadReader
-│   ├─ audio/                  OpusPlayer
-│   └─ ui/                     Ui
-│
-├─ src/                     ⚙️ IMPLEMENTAÇÃO
-│   ├─ app/                    ponto de entrada (main.cpp): junta tudo
-│   ├─ core/                   log e tempo
-│   ├─ net/xhome/              login, consoles, sessão, WebRTC, controle binário (+ CLI de teste)
-│   ├─ gpu/
-│   │   ├─ core/               placa de vídeo, filas, memória, DRED
-│   │   ├─ present/            swapchain, relógio, refresh/VRR, detector de Independent Flip
-│   │   └─ pipeline/           motor de compute shaders e passes de imagem/movimento
-│   ├─ input/                  GameInput + XInput, vibração, medidor de taxa
-│   ├─ audio/                  Opus, buffer anti-picote, correção de deriva, WASAPI
-│   └─ ui/                     RmlUi no D3D12 (vidro fosco sobre o jogo), QR do login
-│
-├─ shaders/                 🎨 programas da GPU (HLSL)
-│   ├─ Nv12ToRgb · Deblock · Downscale · FsrEasu · FsrRcas      ← qualidade
-│   └─ FlowAdapt/Refine/Claim/Fill · VfgShotChange · HudLock*   ← frame generation
-│
-├─ assets/ui/               🖌️ INTERFACE (HTML/CSS do RmlUi)
-│   ├─ theme.rcss              cores, botões, sombras, animações
-│   ├─ signin · consoles · connecting · stream · settings .rml
-│   └─ fonts/                  Inter
-│
-├─ tests/                   ✅ testes por módulo (doctest) + bench de shaders
-└─ third_party/
-    ├─ veyra-import/           código do Veyra reaproveitado (referência)
-    ├─ rmlui-backends/         originais do RmlUi
-    └─ fidelityfx/             AMD FidelityFX SDK 2.4 (baixado, fora do git)
+├─ include/fluvi/      public contracts of each module (core, common, gpu, xhome, media, input, audio, ui)
+├─ src/
+│   ├─ app/            fluvi.exe: window, render loop, screens, settings
+│   ├─ core/           logging and time
+│   ├─ net/xhome/      sign-in, consoles, session, WebRTC, binary input protocol (+ test CLI)
+│   ├─ media/          H.264 d3d12va decode, repeat marking, recovery
+│   ├─ gpu/            device, present (swapchain, clock, VRR), pipeline passes, vendor backends
+│   ├─ input/          GameInput + XInput, rumble
+│   ├─ audio/          Opus, jitter buffer, drift correction, WASAPI
+│   └─ ui/             RmlUi on D3D12, sign-in QR code
+├─ shaders/            HLSL compute shaders (image quality and frame generation)
+├─ assets/ui/          screens (.rml), theme (.rcss), fonts, brand
+├─ tests/              doctest suites per module
+├─ cmake/, scripts/    build helpers
+└─ third_party/        downloaded SDKs (not in git)
 ```
-
-### O que é cada coisa
-
-| Arquivo / pasta | Explicação curta |
-|---|---|
-| `.h` em `include/` | a **vitrine**: diz o que um módulo oferece, sem dizer como |
-| `.cpp` em `src/` | a **cozinha**: o código que faz de verdade |
-| `.hlsl` em `shaders/` | programa que roda **na GPU**, em milhares de pixels ao mesmo tempo |
-| `.rml` / `.rcss` | as telas e o estilo, quase HTML/CSS. Mudam sem recompilar |
-| `PROGRESSO.md` em cada módulo | o diário do agente que construiu aquela parte: feito, faltando, próximo passo |
-
----
 
 ## Stack
 
-| Peça | Escolha |
+| Piece | Choice |
 |---|---|
-| Linguagem | C++20 (MSVC 14.44) |
+| Language | C++20 (MSVC) |
 | Build | CMake + Ninja + vcpkg (`x64-windows-static-md`) |
-| Gráficos | Direct3D 12, swapchain flip-model, waitable, tearing, VRR |
-| Rede | libdatachannel (WebRTC) |
-| Vídeo | FFmpeg d3d12va (decode direto na GPU) |
-| Áudio | libopus + WASAPI low-latency |
-| Controle | GameInput, com XInput de reserva |
-| Interface | RmlUi 6.3 (HTML/CSS em D3D12) + Dear ImGui só no debug |
-| Qualidade | Lanczos 1440→1080, deblock, RCAS; FSR 4.1.2 pro caso 720p |
-| Frame generation | optical flow FidelityFX + refino `Flow*` + FSR 3.1 FG em contexto independente |
+| Graphics | Direct3D 12, flip-model waitable swapchain, tearing, VRR |
+| Network | libdatachannel (WebRTC) |
+| Video | FFmpeg d3d12va (decode on the GPU) |
+| Audio | libopus + low-latency WASAPI |
+| Input | GameInput, XInput fallback |
+| UI | RmlUi 6.3 on D3D12 |
+| Image quality | Lanczos downscale, deblock, RCAS; FSR 4.1.2 / EASU for 720p |
+| Frame generation | FidelityFX optical flow + `Flow*` refinement + FSR 3.1 FG |
 
 ---
 
-## Como compilar
+## Building
 
-Pré-requisitos (já estão nesta máquina): **VS Build Tools 2022** com C++, Windows SDK 10.0.26100, e o CMake, o
-Ninja e o vcpkg que vêm com o VS.
+Requirements: Windows 10/11 x64, Visual Studio 2022 (or Build Tools) with the C++ workload, Windows SDK 10.0.26100,
+and the CMake, Ninja and vcpkg that ship with Visual Studio.
 
 ```powershell
-# 1. baixa o SDK da AMD (fica fora do git)
+# 1. download the AMD FidelityFX SDK (kept out of git)
 pwsh scripts/fetch-deps.ps1
 
-# 2. configura (o vcpkg instala as bibliotecas na primeira vez)
+# 2. configure (vcpkg installs the libraries on first run)
 scripts\dev.cmd cmake --preset debug
 
-# 3. compila
+# 3. build
 scripts\dev.cmd cmake --build build\debug
 
-# 4. roda os testes
+# 4. test
 scripts\dev.cmd ctest --preset debug
 ```
 
-Pra compilar só um módulo: `-DFLUVI_MODULES=gpu` (ou `xhome`, `pipeline`, `input`, `audio`, `ui`).
+`scripts\dev.cmd` finds Visual Studio through vswhere. To point it somewhere else, or to move the vcpkg caches, create
+`scripts\dev.local.cmd` (untracked) and set `FLUVI_VS`, `VCPKG_ROOT` or the vcpkg cache variables there.
 
-Programas de teste avulsos:
+Build a single module with `-DFLUVI_MODULES=gpu` (or `pipeline`, `xhome`, `media`, `input`, `audio`, `ui`, `app`).
 
-| Programa | O que faz |
+Standalone tools:
+
+| Program | What it does |
 |---|---|
-| `fluvi_gpu_demo` | abre uma janela, testa o relógio e mostra no log se tem VRR e Independent Flip |
-| `fluvi_xhome_cli` | login, lista de consoles, ligar console, sem interface |
-| `fluvi_pad_probe` | mostra o controle e a taxa de leitura |
-| `fluvi_pipeline_bench` | mede quantos ms cada shader gasta na sua GPU |
+| `fluvi_gpu_demo` | opens a window, exercises the present clock and logs VRR and Independent Flip |
+| `fluvi_xhome_cli` | sign-in, console list, power on, no UI |
+| `fluvi_pad_probe` | shows the gamepad state and polling rate |
+| `fluvi_pipeline_bench` | measures how many ms each shader takes on your GPU |
+
+## Contributing
+
+Read [AGENTS.md](AGENTS.md): architecture rules, code style and commit conventions.
 
 ---
 
-## Como está sendo construído
+## Credits and license
 
-O projeto é construído em **ondas**: vários agentes de IA trabalham em paralelo, cada um dono das suas pastas e
-seguindo os contratos de `include/fluvi/`. Ao fim de cada onda, a sessão principal integra, compila e testa.
+Fluvi is **GPL-3.0-only**. It builds on, and thanks:
 
-| Onda | Entrega | Estado |
-|---|---|---|
-| **0** | base, contratos, núcleo, import do Veyra | ✅ feita |
-| **1** | GPU e tela, protocolo Xbox, interface, controle e áudio, shaders | 🟠 pela metade |
-| **2** | WebRTC + decode, cadeia de qualidade, opção pro Lossless, interface com dados reais → **primeiro stream** | ⏳ |
-| **3** | modo Liso (FG), medição de latência, acabamento e zip portable | ⏳ |
-
-Onde a onda 1 parou:
-
-| Módulo | Estado |
-|---|---|
-| `gpu` (core + present) | ✅ compila, testes passam na RX 6600 |
-| `xhome` | ✅ compila, 15/16 testes passam |
-| `input` | ✅ compila, testes passam (falta testar com controle real) |
-| `audio` | ⚠️ compila, correção de deriva com sinal trocado |
-| `pipeline` (shaders) | ⚠️ shaders compilam, módulo e testes ainda não montados |
-| `ui` | ⚠️ telas e renderizador escritos, falta a ligação com o C++ |
-
-Detalhes em cada `src/**/PROGRESSO.md` e no [PLANO.md](PLANO.md).
-
----
-
-## Créditos e licença
-
-Fluvi é **GPL-3.0-only**. Ele reaproveita e agradece:
-
-- **[Veyra](https://github.com/Likely7/Veyra-NRVideo)** (GPL-3.0): protocolo xHome, FSR FG em contexto
-  independente, shaders de refino de movimento, trava de HUD e descarte de repetidos.
-- **[Greenlight](https://github.com/unknownskl/greenlight)** (MIT): mensagens de 1440p (PR #1752) e bitrate.
-- **[AMD FidelityFX SDK](https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK)**: FSR 1, FSR 3.1/4.1 e optical flow.
+- **[Veyra](https://github.com/Likely7/Veyra-NRVideo)** (GPL-3.0): xHome protocol, FSR FG in an independent context,
+  motion refinement shaders, HUD lock and duplicate-frame removal.
+- **[Greenlight](https://github.com/unknownskl/greenlight)** (MIT): 1440p messages (PR #1752) and bitrate.
+- **[AMD FidelityFX SDK](https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK)**: FSR 1, FSR 3.1/4.1 and
+  optical flow.
 - **[RmlUi](https://github.com/mikke89/RmlUi)** (MIT), **[libdatachannel](https://github.com/paullouisageneau/libdatachannel)** (MPL-2.0),
   **Opus** (BSD), **FFmpeg** (LGPL/GPL), **Inter** (OFL).
 
-> ⚠️ Projeto pessoal, sem relação com a Microsoft. Usa os mesmos serviços de Remote Play dos clientes abertos; a
-> Microsoft pode mudar ou bloquear isso a qualquer momento.
+> Fluvi is an independent project, not affiliated with or endorsed by Microsoft. Xbox is a trademark of Microsoft.
+> It uses the same Remote Play services as the open clients, which Microsoft may change or block at any time.
