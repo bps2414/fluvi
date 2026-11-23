@@ -35,11 +35,13 @@ endforeach()
 # Vendor upscaler backends (agent G): FSR 4.1.2 through the FidelityFX loader DLL, loaded at run time.
 set(FLUVI_FFX_SIGNEDBIN "${FLUVI_ROOT}/third_party/fidelityfx/sdk/Kits/FidelityFX/signedbin")
 set(FLUVI_FFX_API_INCLUDE "${FLUVI_ROOT}/third_party/fidelityfx/sdk/Kits/FidelityFX/api/include"
-                          "${FLUVI_ROOT}/third_party/fidelityfx/sdk/Kits/FidelityFX/upscalers/include")
+                          "${FLUVI_ROOT}/third_party/fidelityfx/sdk/Kits/FidelityFX/upscalers/include"
+                          "${FLUVI_ROOT}/third_party/fidelityfx/sdk/Kits/FidelityFX/framegeneration/include")
 
 add_library(fluvi_pipeline STATIC
   ComputeKernel.cpp ImagePasses.cpp FlowPasses.cpp QualityChain.cpp
-  "${FLUVI_ROOT}/src/gpu/backends/Fsr4Backend.cpp" ${FLUVI_PIPELINE_GENERATED})
+  "${FLUVI_ROOT}/src/gpu/backends/Fsr4Backend.cpp" "${FLUVI_ROOT}/src/gpu/backends/FsrFgBackend.cpp"
+  ${FLUVI_PIPELINE_GENERATED})
 fluvi_defaults(fluvi_pipeline)
 target_include_directories(fluvi_pipeline PRIVATE "${FLUVI_SHADER_GEN_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}")
 target_include_directories(fluvi_pipeline SYSTEM PRIVATE ${FLUVI_FFX_API_INCLUDE})

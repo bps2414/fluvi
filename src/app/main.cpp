@@ -11,6 +11,7 @@
 //   only the UI changed. Nothing is presented while streaming if neither changed (the window follows the content).
 //   Audio: session Opus packets -> audio::OpusPlayer (WASAPI). Smooth mode (FG) and the present clock are wave 3.
 #include <windows.h>
+#include <timeapi.h>
 
 #include <algorithm>
 #include <atomic>
@@ -30,6 +31,7 @@
 #include "fluvi/core/Log.h"
 #include "fluvi/core/Time.h"
 #include "fluvi/gpu/Device.h"
+#include "fluvi/gpu/FrameGen.h"
 #include "fluvi/gpu/QualityChain.h"
 #include "fluvi/gpu/SwapChain.h"
 #include "fluvi/ui/Ui.h"
@@ -71,6 +73,9 @@ void Transition(ID3D12GraphicsCommandList* list, ID3D12Resource* r, D3D12_RESOUR
 
 int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+    // Latency: 1 ms timer resolution (waits and the Liso pacing wake on time) and the render thread ahead of the rest.
+    timeBeginPeriod(1);
+    SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_ABOVE_NORMAL);
     FLUVI_INFO("app", "Fluvi 0.1.0");
 
     // Settings: defaults when the file is missing or corrupt (the corrupt file is overwritten on the next change).
@@ -205,6 +210,26 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
     int64_t lastStatsQpc = 0;
     uint64_t presentsSinceStats = 0;
 
+    // ---- Liso (FG): FSR 3.1 interpolation at the window size, created on first use ----
+    // A new real frame N: the chain writes N into `out`, FG writes the N-1/N in-between into `fgOut`, the in-between
+    // is presented at once and N half a content interval later (or right away if N+1 arrives first).
+    std::unique_ptr<gpu::FrameGenerator> fg;
+    std::unique_ptr<gpu::Texture> fgOut;
+    bool fgFailed = false;
+    std::string fgError;
+    bool fgReset = true;
+    bool realPending = false;
+    int64_t realDueQpc = 0;
+    media::DecodedFramePtr stash;      // a new frame that arrived while the real one was still pending
+    StreamMode lastMode = mode.load();
+    auto dropFg = [&] {
+        if (!fg && !fgOut) return;
+        device->WaitIdle();
+        fg.reset();
+        fgOut.reset();
+    };
+    int statsTicks = 0;
+
     app::PadNav nav;
     const int64_t start = time::NowQpc();
     int rc = 0;
@@ -220,6 +245,9 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
             ui->Resize(swap->Width(), swap->Height(), 1.0f);
             makeOut();
             haveOutput = false;
+            dropFg();                  // recreated at the new size below
+            fgReset = true;
+            realPending = false;
         }
 
         // Settings and mode changes from the app (any thread) -> the chain, the gate and the audio, here.
@@ -252,19 +280,78 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
             shown.reset();
             if (chain) chain->ResetHistory();
             wasStreaming = streaming;
+            stash.reset();
+            fgReset = true;
+            realPending = false;
         }
-        media::DecodedFramePtr fresh;
-        gpu::FrameDecision decision{false, false};
-        if (streaming) {
-            while (auto f = decoder->TryPop()) fresh = std::move(f);
-            const bool uiAnimating = ui->OverlayVisible() || ui->CurrentScreen() != ui::Screen::Stream;
-            if (!fresh && !uiAnimating && haveOutput) {
-                // Nothing to show: wait for the decoder instead of spinning (the loop still services the pad).
-                fresh = decoder->WaitPop(8);
-                if (!fresh) continue;
+
+        // Liso: Jogar <-> Liso resets the pacing; the generator is made once per size (seconds the first time).
+        const bool smoothWanted = mode.load() == StreamMode::Smooth;
+        if (mode.load() != lastMode) {
+            lastMode = mode.load();
+            fgReset = true;
+            realPending = false;
+        }
+        if (fgFailed && (fg || fgOut)) dropFg();
+        if (streaming && smoothWanted && !fgFailed && (!fg || fg->Width() != swap->Width() || fg->Height() != swap->Height())) {
+            dropFg();
+            Status fs;
+            fg = gpu::FrameGenerator::Create(device->D3D(), swap->Width(), swap->Height(), gpu::kOutputFormat, fs);
+            if (fg) {
+                gpu::TextureDesc td;
+                td.width = swap->Width();
+                td.height = swap->Height();
+                td.format = gpu::kOutputFormat;
+                td.shaderRead = false;
+                td.unorderedAccess = true;
+                td.initialState = D3D12_RESOURCE_STATE_COMMON;
+                td.debugName = L"fluvi fg out";
+                fgOut = device->CreateTexture(td, fs);
             }
-            if (fresh) decision = gate.OnFrame(fresh->isNew, nowMs, !haveOutput);
-            if (!decision.process && !uiAnimating && haveOutput) continue;   // a repeat, "only new frames" on
+            if (!fg || !fgOut) {
+                fgFailed = true;
+                fgError = fs.message;
+                FLUVI_ERROR("fg", "modo Liso indisponível: {}", fs.message);
+                dropFg();
+            }
+            fgReset = true;
+        }
+        const bool smooth = streaming && smoothWanted && fg && fgOut && !fgFailed;
+
+        media::DecodedFramePtr fresh = std::move(stash);
+        gpu::FrameDecision decision{false, false};
+        bool presentReal = false;
+        if (streaming) {
+            while (auto f = decoder->TryPop()) {
+                if (smooth && !f->isNew && haveOutput) continue;   // Liso: a repeat carries nothing new
+                fresh = std::move(f);
+            }
+            const bool uiAnimating = ui->OverlayVisible() || ui->CurrentScreen() != ui::Screen::Stream;
+            if (smooth && realPending) {
+                // The real frame is due half a content interval after the in-between one; a new frame cuts the wait.
+                while (!fresh) {
+                    const double left = time::ElapsedMs(time::NowQpc(), realDueQpc);
+                    if (left <= 0.25) break;
+                    if (left > 1.5) {
+                        if (auto f = decoder->WaitPop(static_cast<uint32_t>(std::min(left - 1.0, 8.0))); f && f->isNew)
+                            fresh = std::move(f);
+                    } else {
+                        Sleep(0);
+                    }
+                }
+                presentReal = true;
+                stash = std::move(fresh);   // processed on the next pass, after the real frame is out
+                fresh = nullptr;
+            } else {
+                if (!fresh && !uiAnimating && haveOutput) {
+                    // Nothing to show: wait for the decoder instead of spinning (the loop still services the pad).
+                    fresh = decoder->WaitPop(8);
+                    if (!fresh) continue;
+                    if (smooth && !fresh->isNew) continue;
+                }
+                if (fresh) decision = gate.OnFrame(fresh->isNew, nowMs, !haveOutput);
+                if (!decision.process && !uiAnimating && haveOutput) continue;   // a repeat, "only new frames" on
+            }
         }
 
         if (!swap->WaitForNextFrame(100)) continue;
@@ -273,6 +360,8 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
         const uint32_t i = swap->CurrentIndex();
         auto* list = ctx->Begin();
         bool processed = false;
+        bool showGenerated = false;
+        float contentMs = 33.333f;
         if (streaming && fresh && decision.process) {
             if (Status cs = chain->Configure(fresh->width, fresh->height, swap->Width(), swap->Height()); !cs)
                 FLUVI_WARN("app", "chain configure: {}", cs.message);
@@ -286,13 +375,29 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
             np.visibleHeight = fresh->height;
             processed = chain->Record(list, fresh->texture, np, out->View());
             haveOutput = haveOutput || processed;
+            if (processed && smooth) {
+                if (fresh->contentDuration90k) contentMs = std::clamp(fresh->contentDuration90k / 90.0f, 8.0f, 50.0f);
+                Transition(list, out->View().resource, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COMMON);
+                const bool wasReset = fgReset;
+                if (fg->Generate(list, out->View().resource, fgOut->View().resource, fgReset, contentMs)) {
+                    showGenerated = !wasReset;   // after a reset the output is not an in-between frame
+                    fgReset = false;
+                } else {
+                    fgFailed = true;
+                    fgError = "o FSR FG falhou (ver fluvi.log)";
+                }
+                Transition(list, out->View().resource, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+            }
         }
         if (streaming && haveOutput) {
-            // The chain's output (same size and format as the back buffer, bars included) becomes the frame.
-            Transition(list, out->View().resource, D3D12_RESOURCE_STATE_UNORDERED_ACCESS, D3D12_RESOURCE_STATE_COPY_SOURCE);
+            // The chain's output (same size and format as the back buffer, bars included) becomes the frame; in Liso
+            // the in-between frame goes first.
+            ID3D12Resource* src = showGenerated ? fgOut->View().resource : out->View().resource;
+            const D3D12_RESOURCE_STATES srcState = showGenerated ? D3D12_RESOURCE_STATE_COMMON : D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+            Transition(list, src, srcState, D3D12_RESOURCE_STATE_COPY_SOURCE);
             Transition(list, swap->BackBuffer(i), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_COPY_DEST);
-            list->CopyResource(swap->BackBuffer(i), out->View().resource);
-            Transition(list, out->View().resource, D3D12_RESOURCE_STATE_COPY_SOURCE, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+            list->CopyResource(swap->BackBuffer(i), src);
+            Transition(list, src, D3D12_RESOURCE_STATE_COPY_SOURCE, srcState);
             Transition(list, swap->BackBuffer(i), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_RENDER_TARGET);
         } else {
             Transition(list, swap->BackBuffer(i), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
@@ -308,11 +413,17 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
             shown = fresh;
         }
         // A new picture goes out at once (tearing / VRR); UI-only frames keep vsync. Wave 3 adds the present clock.
-        const gpu::PresentRequest pr = processed ? gpu::PresentRequest{0, true} : gpu::PresentRequest{1, false};
+        const gpu::PresentRequest pr = (processed || presentReal) ? gpu::PresentRequest{0, true} : gpu::PresentRequest{1, false};
         if (Status ps = swap->Present(pr); !ps) {
             FLUVI_ERROR("app", "present: {}", ps.message);
             if (FAILED(device->CheckRemoved())) { Fatal("A placa de vídeo foi reiniciada pelo Windows. Abra o Fluvi de novo."); rc = 2; }
             break;
+        }
+        if (showGenerated) {
+            realPending = true;
+            realDueQpc = time::NowQpc() + time::MsToQpc(contentMs * 0.5);
+        } else if (presentReal || processed) {
+            realPending = false;
         }
         ++presentsSinceStats;
         if (processed) {
@@ -342,7 +453,17 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
                 if (liveSession) os.rttMs = liveSession->stats().rttMs;
             }
             if (os.warning.empty() && !chain->Fsr4Fallback().empty()) os.warning = "FSR 4 indisponível, usando EASU";
+            if (smoothWanted && fgFailed) os.warning = "Liso indisponível: " + fgError;
             ui->SetStats(os);
+            // Latency in the log every ~5 s (the overlay shows the same): where the time goes, for field tests.
+            if (shown && ++statsTicks % 10 == 0) {
+                const int64_t presented = ps.lastPresentQpc ? ps.lastPresentQpc : nowQpc;
+                FLUVI_INFO("latency", "chegada->decode {:.1f} ms, decode->tela {:.1f} ms, chegada->tela {:.1f} ms | tela {:.0f} fps, "
+                           "conteúdo {:.0f}/stream {:.0f} fps, modo {} ({}), rtt {:.0f} ms, perdidos {}",
+                           time::ElapsedMs(shown->arrivalQpc, shown->decodedQpc), time::ElapsedMs(shown->decodedQpc, presented),
+                           time::ElapsedMs(shown->arrivalQpc, presented), os.presentedFps, os.gameFps, os.streamFps,
+                           smooth ? "Liso" : "Jogar", static_cast<int>(os.presentMode), os.rttMs, os.framesDropped);
+            }
             lastStatsQpc = nowQpc;
             presentsSinceStats = 0;
         }
@@ -352,6 +473,9 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
     app.Shutdown();
     window.SetUi(nullptr);
     device->WaitIdle();
+    fg.reset();
+    fgOut.reset();
+    stash.reset();
     shown.reset();
     decoder.reset();
     chain.reset();
@@ -363,5 +487,6 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
     device.reset();
     window.Stop();
     xhome::shutdownWebRtc();
+    timeEndPeriod(1);
     return rc;
 }

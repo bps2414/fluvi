@@ -18,12 +18,13 @@ target_link_libraries(fluvi_app_core
 
 add_executable(fluvi WIN32 main.cpp Window.cpp fluvi.rc)
 fluvi_defaults(fluvi)
-target_link_libraries(fluvi PRIVATE fluvi_app_core fluvi_gpu fluvi_pipeline fluvi_media fluvi_audio user32)
-# FSR 4: the FidelityFX loader + upscaler DLLs ship next to fluvi.exe (FFmpeg's are copied by fluvi_media).
+target_link_libraries(fluvi PRIVATE fluvi_app_core fluvi_gpu fluvi_pipeline fluvi_media fluvi_audio user32 winmm)
+# FSR 4 + FSR FG (modo Liso): the FidelityFX loader, upscaler and framegeneration DLLs ship next to fluvi.exe (FFmpeg's are copied by fluvi_media).
 add_custom_command(TARGET fluvi POST_BUILD
   COMMAND "${CMAKE_COMMAND}" -E copy_if_different
           "${FLUVI_ROOT}/third_party/fidelityfx/sdk/Kits/FidelityFX/signedbin/amd_fidelityfx_loader_dx12.dll"
           "${FLUVI_ROOT}/third_party/fidelityfx/sdk/Kits/FidelityFX/signedbin/amd_fidelityfx_upscaler_dx12.dll"
+          "${FLUVI_ROOT}/third_party/fidelityfx/sdk/Kits/FidelityFX/signedbin/amd_fidelityfx_framegeneration_dx12.dll"
           "$<TARGET_FILE_DIR:fluvi>")
 
 fluvi_add_test(fluvi_app_tests

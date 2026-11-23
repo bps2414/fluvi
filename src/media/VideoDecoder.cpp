@@ -183,6 +183,7 @@ private:
     // ---- thread ----------------------------------------------------------------------------------------------
     void Run() {
         FLUVI_INFO("media", "decode thread started");
+        SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_ABOVE_NORMAL);   // latency: decode right as the AU lands
         while (!stop_) {
             auto unit = input_.WaitPop(std::chrono::milliseconds(50));
             if (!unit) continue;
@@ -255,6 +256,10 @@ private:
         if (!pkt || av_new_packet(pkt, int(unit.data.size())) < 0) { av_packet_free(&pkt); return nullptr; }
         std::memcpy(pkt->data, unit.data.data(), unit.data.size());
         pkt->pts = meta.pts;
+        // Latency: the console never sends B-frames, but FFmpeg's H.264 output heuristic can grow a reorder delay
+        // ("Increasing reorder buffer", e.g. POC steps > 2) that holds every picture one or more frames. Decode order
+        // is display order here, so the delay is forced back to zero before each packet.
+        ctx_->has_b_frames = 0;
         int ret = avcodec_send_packet(ctx_, pkt);
         av_packet_free(&pkt);
         if (ret < 0 && ret != AVERROR(EAGAIN)) {
@@ -276,7 +281,10 @@ private:
             DecodeFailed("receive_frame: " + AvError(ret));
             return nullptr;
         }
-        if (!latest) return nullptr;
+        if (!latest) {
+            if (info.hasSlice && ++heldPictures_ <= 3) FLUVI_WARN("media", "decoder returned no picture for a slice (held {})", heldPictures_);
+            return nullptr;
+        }
         if ((latest->flags & AV_FRAME_FLAG_CORRUPT) || latest->decode_error_flags) {
             av_frame_free(&latest);
             DecodeFailed("corrupt picture");
@@ -708,6 +716,7 @@ private:
     int64_t ptsCounter_ = 0;
     std::deque<Meta> metas_;
     static constexpr size_t kHeldFrames = 20;
+    uint32_t heldPictures_ = 0;   // AUs with slices that gave no picture (should stay 0: no reorder delay)
     std::deque<AVFrame*> held_;   // decoded pictures kept referenced (see Decode)
     h264::Parser parser_;
     h264::FrameNumTracker frameNums_;
