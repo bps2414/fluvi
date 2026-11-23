@@ -28,14 +28,15 @@ Modules: `core`, `gpu` (core, present, pipeline, backends), `xhome` (`src/net/xh
 Run from PowerShell (from bash, the `;` in `-DFLUVI_MODULES=a;b` is lost):
 
 ```powershell
-pwsh scripts/fetch-deps.ps1                     # FidelityFX SDK, once
+scripts\dev.cmd pwsh scripts/fetch-deps.ps1    # FidelityFX SDK and FFmpeg, once
 scripts\dev.cmd cmake --preset debug            # or release
 scripts\dev.cmd cmake --build build\debug
 scripts\dev.cmd ctest --preset debug
 ```
 
 - `scripts\dev.cmd` finds Visual Studio with vswhere. Machine-specific paths go in `scripts\dev.local.cmd`
-  (untracked): `FLUVI_VS`, `VCPKG_ROOT`, vcpkg cache variables, `FLUVI_VCPKG_INSTALL_OPTIONS`.
+  (untracked): `FLUVI_VS`, `VCPKG_ROOT`, vcpkg cache variables, `FLUVI_VCPKG_INSTALL_OPTIONS`, `FLUVI_FFMPEG_DIR`,
+  `FLUVI_DEPS_CACHE`.
 - Build one module with `-DFLUVI_MODULES=gpu` (or `pipeline`, `xhome`, `media`, `input`, `audio`, `ui`, `app`).
 - Tests that need a real GPU or device carry the ctest label `gpu` or `device`; skip them with `-LE "gpu|device"`.
 - The build must stay warning-free (`/W4 /permissive-`).

@@ -135,8 +135,8 @@ Requirements: Windows 10/11 x64, Visual Studio 2022 (or Build Tools) with the C+
 and the CMake, Ninja and vcpkg that ship with Visual Studio.
 
 ```powershell
-# 1. download the AMD FidelityFX SDK (kept out of git)
-pwsh scripts/fetch-deps.ps1
+# 1. download the AMD FidelityFX SDK and FFmpeg 9.0 (kept out of git)
+scripts\dev.cmd pwsh scripts/fetch-deps.ps1
 
 # 2. configure (vcpkg installs the libraries on first run)
 scripts\dev.cmd cmake --preset debug
@@ -149,7 +149,8 @@ scripts\dev.cmd ctest --preset debug
 ```
 
 `scripts\dev.cmd` finds Visual Studio through vswhere. To point it somewhere else, or to move the vcpkg caches, create
-`scripts\dev.local.cmd` (untracked) and set `FLUVI_VS`, `VCPKG_ROOT` or the vcpkg cache variables there.
+`scripts\dev.local.cmd` (untracked) and set `FLUVI_VS`, `VCPKG_ROOT` or the vcpkg cache variables there. To use an
+FFmpeg shared build you already have, set `FLUVI_FFMPEG_DIR` there; `fetch-deps.ps1` then skips the download.
 
 Build a single module with `-DFLUVI_MODULES=gpu` (or `pipeline`, `xhome`, `media`, `input`, `audio`, `ui`, `app`).
 

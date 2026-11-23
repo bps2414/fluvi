@@ -7,8 +7,13 @@ if(NOT FLUVI_DXC)
   message(FATAL_ERROR "dxc not found (Windows SDK bin\\x64). Set FLUVI_DXC.")
 endif()
 
-# ---- FFmpeg (dev: the shared build in Tools; delivery: a trimmed h264/hevc build, same layout) -------------
-set(FLUVI_FFMPEG_DIR "D:/Bryan/Dev/Tools/ffmpeg-shared" CACHE PATH
+# ---- FFmpeg (scripts/fetch-deps.ps1 puts a shared build in third_party/ffmpeg; env FLUVI_FFMPEG_DIR overrides) ---
+if(DEFINED ENV{FLUVI_FFMPEG_DIR})
+  set(_ffmpeg_default "$ENV{FLUVI_FFMPEG_DIR}")
+else()
+  set(_ffmpeg_default "${FLUVI_ROOT}/third_party/ffmpeg")
+endif()
+set(FLUVI_FFMPEG_DIR "${_ffmpeg_default}" CACHE PATH
     "FFmpeg shared build (include/ lib/ bin/), or a folder holding one such build")
 set(_ffmpeg_roots "${FLUVI_FFMPEG_DIR}")
 file(GLOB _ffmpeg_sub LIST_DIRECTORIES true "${FLUVI_FFMPEG_DIR}/*")

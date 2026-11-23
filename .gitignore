@@ -5,6 +5,8 @@
 
 # Downloaded by scripts/fetch-deps.ps1
 /third_party/fidelityfx/
+/third_party/ffmpeg/
+/third_party/.cache/
 
 # Local reference copies (upstream sources, not compiled)
 /third_party/veyra-import/
