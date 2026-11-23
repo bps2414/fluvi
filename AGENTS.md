@@ -88,8 +88,17 @@ and will move to translation files.
 - [Conventional Commits](https://www.conventionalcommits.org/): `type(scope): summary`.
   - Types: `feat`, `fix`, `perf`, `refactor`, `test`, `docs`, `build`, `chore`.
   - Scopes: module names (`core`, `gpu`, `pipeline`, `xhome`, `media`, `input`, `audio`, `ui`, `app`) or omitted.
-- Summary in the imperative, lower case, no period, at most 72 characters. The body explains why when it is not
-  obvious.
+- Summary in the imperative, lower case, no period, at most 72 characters.
+- Every commit has a body, wrapped at 72 characters. Write it for a reader who does not program:
+  - what was wrong or missing before the change;
+  - what the change does, naming the files or parts involved;
+  - what it means for the person who uses the app, with numbers when there are any.
+
+  Explain each technical term the first time it appears. Use short paragraphs, or a list when the commit has
+  several separate changes.
+- Write the body by the [unslop](https://github.com/cursor/plugins/tree/main/pstack/skills/unslop) rules: plain
+  words, active voice, one idea per sentence, numbers instead of vague words, no filler, no em dashes or dashes as
+  punctuation, no arrows or unexplained abbreviations.
 - One logical change per commit; the build and tests pass at every commit.
 - Never commit build output, downloaded SDKs, secrets, tokens, personal notes or machine-specific paths.
 - No tool-generated trailers (`Co-Authored-By`, "Generated with ...").
