@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// Fluvi pipeline: the quality chain (PLANO §1 "Todo monitor e todo PC", §8). Owner: agent G (src/gpu/pipeline).
+// Fluvi pipeline: the quality chain: any monitor, any GPU.
 //
 //   decoded NV12 (+ visible crop)  ->  RGB  ->  deblock  ->  [ downscale | nothing | FSR 4.1.2 / EASU ]  ->  RCAS
 //                                                                                    -> RGBA8 output, any size

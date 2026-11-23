@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Fluvi gpu: FSR 3.1 frame interpolation into app-owned textures. Contract: include/fluvi/gpu/FrameGen.h.
-// Ported from Veyra (GPL-3.0-only), src/gfx/FsrFgPresenter.cpp @ c6633121 (third_party/veyra-import). Changes:
+// Ported from Veyra (GPL-3.0-only), src/gfx/FsrFgPresenter.cpp @ c6633121. Changes:
 // Fluvi logging/Status, DLL search like Fsr4Backend (exe dir, FLUVI_FFX_DIR, SDK signedbin), zero motion + constant
 // depth owned here, prefers the 3.1 provider and falls back to the default one.
 #include "fluvi/gpu/FrameGen.h"

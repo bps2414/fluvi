@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Fluvi pipeline: motion-refinement, shot-change and HUD-lock compute passes ported from Veyra (GPL-3.0-only,
 // shaders/Flow{Adapt,Refine,Claim,Fill}, VfgShotChange, HudLock{Update,Compose}.hlsl @ c6633121).
-// Owner: agent E. Consumed by the frame-generation module in wave 3.
+// Consumed by the frame-generation module.
 //
 // Same rules as Passes.h: Init once per device; Record() only records (no allocation, no waits, no descriptor
 // writes); the caller has bound the shader-visible CBV_SRV_UAV heap holding the GpuTexture descriptors; inputs

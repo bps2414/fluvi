@@ -1,4 +1,4 @@
-# gpu-core (agent A): device, descriptors, textures, command contexts, swapchain, present clock.
+# gpu-core: device, descriptors, textures, command contexts, swapchain, present clock.
 # src/gpu/pipeline is a separate module (added by the root CMakeLists).
 add_library(fluvi_gpu STATIC
   core/Device.cpp

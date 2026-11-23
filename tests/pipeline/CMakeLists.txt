@@ -1,4 +1,4 @@
-# Owned by agent E. Included from src/gpu/pipeline/CMakeLists.txt.
+# Included from src/gpu/pipeline/CMakeLists.txt.
 # Test utilities: a self-contained D3D12 device + procedural images (no dependency on fluvi_gpu).
 add_library(fluvi_pipeline_testutil STATIC TestGpu.cpp Images.cpp)
 fluvi_defaults(fluvi_pipeline_testutil)

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// Fluvi quality chain (agent G): path selection, presets, GPU detection, the new-frames gate (no GPU needed) and the
+// Fluvi quality chain: path selection, presets, GPU detection, the new-frames gate (no GPU needed) and the
 // chain itself on the GPU (same rules as PipelineTests.cpp: debug layer on, zero errors per test case).
 #include <doctest/doctest.h>
 

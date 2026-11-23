@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// Fluvi xhome: what the client asks the console for. Owner: agent B (src/net/xhome, include/fluvi/xhome).
+// Fluvi xhome: what the client asks the console for.
 //
-// The rest of the xhome public API is the Veyra port (third_party/veyra-import/include/veyra/xbox) moved to
-// namespace fluvi::xhome with these fixed points, which later waves code against:
+// The rest of the xhome public API is ported from Veyra (include/veyra/xbox @ c6633121) into
+// namespace fluvi::xhome, with these fixed points:
 //   Https.h         HttpsTransport (WinHTTP) + ServiceError/NetworkError
 //   Account.h       Account: beginSignIn / pollSignIn / signedIn / signOut / streamingAccess / transferToken
 //                   tokens DPAPI-protected under %LOCALAPPDATA%\Fluvi\xhome (FLUVI_XHOME_DATA overrides, tests)
@@ -24,10 +24,10 @@ struct StreamConfig {
     // Greenlight PR #1752 (VideoPreference, userRequestedResolutionUpdate, device-info 2560x1440).
     uint32_t width = 2560, height = 1440;
     // Video bitrate written as b=AS (kbps) in the offer, as Greenlight's sdp.ts does. 0 = the highest
-    // value the console is known to accept (agent B documents the number it picked and why).
+    // value the console is known to accept (see the comment on the chosen value).
     uint32_t maxBitrateKbps = 0;
     std::string locale = "pt-BR";
-    // Additive (agent B): list H.264 High first in the offer, then Main, Constrained Baseline, Baseline
+    // List H.264 High first in the offer, then Main, Constrained Baseline, Baseline
     // (the reference client offers only the last three). Turn off if a console ever rejects the offer.
     bool offerHighProfile = true;
 };

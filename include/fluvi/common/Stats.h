@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// Fluvi: what the in-game overlay shows. Filled by the integration (wave 2/3), drawn by the UI.
+// Fluvi: what the in-game overlay shows. Filled by the app, drawn by the UI.
 #pragma once
 #include <cstdint>
 #include <optional>

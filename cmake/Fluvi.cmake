@@ -21,7 +21,7 @@ function(fluvi_add_test name)
   endif()
 endfunction()
 
-# DXC from the Windows SDK, for build-time shader compilation (agent E owns its use).
+# DXC from the Windows SDK, for build-time shader compilation.
 find_program(FLUVI_DXC dxc
   HINTS "$ENV{WindowsSdkVerBinPath}/x64" "C:/Program Files (x86)/Windows Kits/10/bin/${CMAKE_SYSTEM_VERSION}/x64"
   DOC "DirectX Shader Compiler")

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// Fluvi app: starts and ends a console stream. The interface is what the app (and later the main session) codes
-// against; XhomeStreamController implements it now with the xhome signalling + WebRTC start only. Decode and the
+// Fluvi app: starts and ends a console stream. The interface is what the app codes against;
+// XhomeStreamController implements it now with the xhome signalling + WebRTC start only. Decode and the
 // quality chain are NOT here: they plug in through StreamHooks (see HOOK markers).
 //
 // Threading: start() / cancel() return at once. Everything else runs on the controller's own thread, and the
@@ -31,7 +31,7 @@ struct StreamEvents {
     std::function<void(const std::string& reason)> ended;
 };
 
-// HOOK(decode) and HOOK(chain): the main session fills these before start(). All of them run on xhome / controller
+// HOOK(decode) and HOOK(chain): main.cpp fills these before start(). All of them run on xhome / controller
 // threads and must return fast (queue the work).
 struct StreamHooks {
     // Forwarded to the WebRtcSession as is: video (Annex-B AU, RTP ts, arrival QPC) goes to src/media's decoder,

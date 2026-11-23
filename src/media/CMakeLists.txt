@@ -1,4 +1,4 @@
-# Agent F (media): H.264 Annex-B -> FFmpeg d3d12va -> NV12 gpu-core textures, repeat marking, keyframe recovery.
+# media: H.264 Annex-B -> FFmpeg d3d12va -> NV12 gpu-core textures, repeat marking, keyframe recovery.
 #   fluvi_media             static library (links FFmpeg avcodec/avutil, shared)
 #   fluvi_media_probe       decodes an Annex-B file, prints per-frame timing / isNew (no window)
 #   fluvi_media_tests       CPU: H.264 parsing on the committed clips

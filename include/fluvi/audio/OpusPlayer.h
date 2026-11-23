@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Fluvi audio: Opus packets from the stream -> WASAPI shared mode with the smallest engine period
-// (IAudioClient3), a small jitter buffer and drift correction. Owner: agent D (src/audio).
+// (IAudioClient3), a small jitter buffer and drift correction.
 #pragma once
 #include <cstddef>
 #include <cstdint>

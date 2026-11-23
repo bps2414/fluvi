@@ -1,4 +1,4 @@
-# Owned by agent D (audio). Target: fluvi_audio (static). Pure parts (JitterBuffer, DriftController, DriftResampler,
+# Target: fluvi_audio (static). Pure parts (JitterBuffer, DriftController, DriftResampler,
 # PlayoutEngine) are separate from WasapiRenderer so tests run with simulated clocks and no device.
 find_package(Opus CONFIG REQUIRED)
 

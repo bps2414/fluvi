@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Fluvi input: reads the physical controller and reports every change immediately (event-driven, ~1 kHz),
-// instead of polling every 16 ms like the browser clients. Owner: agent D (src/input).
+// instead of polling every 16 ms like the browser clients.
 // GameInput first (Windows SDK GameInput.h), XInput as fallback.
 #pragma once
 #include <cstdint>

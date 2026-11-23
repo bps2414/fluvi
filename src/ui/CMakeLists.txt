@@ -1,4 +1,4 @@
-# ui (agent C): RmlUi 6.3 drawn inside our D3D12 frame -> fluvi_ui, fluvi_ui_demo, tests.
+# ui: RmlUi 6.3 drawn inside our D3D12 frame -> fluvi_ui, fluvi_ui_demo, tests.
 find_package(RmlUi CONFIG REQUIRED)
 find_package(unofficial-nayuki-qr-code-generator CONFIG REQUIRED)
 

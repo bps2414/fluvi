@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// Fluvi pipeline: the compute passes of the image chain. Owner: agent E (src/gpu/pipeline, shaders/).
+// Fluvi pipeline: the compute passes of the image chain.
 //
-// Chain (wave 2 wires it): NV12 -> RGB -> deblock -> downscale 1440->1080 (or EASU/FSR4 for 720p) -> RCAS.
+// Chain: NV12 -> RGB -> deblock -> downscale 1440->1080 (or EASU/FSR4 for 720p) -> RCAS.
 //
 // Rules shared by every pass:
 // - Init once per device (root signature + PSO, shaders embedded in the binary, compiled at build time).
@@ -78,7 +78,7 @@ private:
     struct Impl; std::unique_ptr<Impl> impl_;
 };
 
-// Where the RCAS image lands in a bigger output (agent G, wave 2).
+// Where the RCAS image lands in a bigger output.
 struct RcasPlacement { uint32_t x = 0, y = 0; };
 
 // FSR 1 RCAS (AMD, MIT): sharpening. sharpness 0..1 (0 = pass-through, 1 = max), mapped to RCAS stops.

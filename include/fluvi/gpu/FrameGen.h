@@ -7,7 +7,7 @@
 // constant depth, so the interpolation comes from FSR's own optical flow (still pixels, like the HUD, stay put).
 //
 // Generate(color = real frame N) writes the frame halfway between N-1 and N into `output`. The caller presents
-// `output` first and N about half a content interval later. Owner: wave 3, agent I.
+// `output` first and N about half a content interval later.
 #pragma once
 #include <cstdint>
 #include <memory>

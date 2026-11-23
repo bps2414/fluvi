@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Fluvi gpu-core: our own presentation clock (what makes Veyra smooth on AMD: FSR FG in an independent
-// context, the app shows the real and the generated frame evenly spaced). Owner: agent A.
+// context, the app shows the real and the generated frame evenly spaced).
 //
 // Play mode: every frame goes out as soon as it is ready (VRR/tearing); the clock only measures.
 // Smooth mode: for each real frame N (ready at t), the generated frame between N-1 and N is shown first

@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Fluvi pipeline: FSR 4.1.2 upscaler backend. AMD FidelityFX SDK 2.4 (MIT), the signed binaries are loaded at run
 // time through amd_fidelityfx_loader_dx12.dll (which loads amd_fidelityfx_upscaler_dx12.dll); nothing links to AMD
-// code. Contract: include/fluvi/gpu/UpscalerBackend.h. Owner: agent G.
+// code. Contract: include/fluvi/gpu/UpscalerBackend.h.
 //
 // Video is not a game: there is no camera jitter and no motion vectors. The backend feeds FSR 4 a constant depth, an
 // all-zero motion vector texture and zero jitter. Temporal accumulation with zero motion would smear anything that
 // moves, so the chain resets the history every frame by default (UpscaleFrame::reset): the result is a clean
-// single-frame ML upscale, with none of the temporal gain FSR 4 has in games. Real motion (from the optical flow of
-// wave 3) could be fed in later.
+// single-frame ML upscale, with none of the temporal gain FSR 4 has in games. Real motion (from the frame-generation optical
+// flow) could be fed in later.
 #include "fluvi/gpu/UpscalerBackend.h"
 
 #include <algorithm>

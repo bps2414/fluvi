@@ -1,4 +1,4 @@
-# fluvi.exe (agent H, wave 2): window thread, render loop, sign-in / consoles / connecting, saved settings, pad navigation.
+# fluvi.exe: window thread, render loop, sign-in / consoles / connecting, saved settings, pad navigation.
 #   fluvi_app_core   the logic without a window or a GPU (settings JSON, pad navigation, model mapping, stream
 #                    controller, app controller): what the tests link
 #   fluvi            the exe (window + render loop + fluvi.rc with the icon)

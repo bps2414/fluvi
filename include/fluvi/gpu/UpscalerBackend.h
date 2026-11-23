@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// Fluvi pipeline: the small interface every vendor upscaler backend sits behind (PLANO §8: backends are loaded by DLL
+// Fluvi pipeline: the small interface every vendor upscaler backend sits behind (backends are loaded by DLL
 // at run time, nothing in the chain requires a specific GPU). Today: FSR 4.1.2 (AMD FidelityFX SDK 2.4, signed DLLs
 // loaded through amd_fidelityfx_loader_dx12.dll). The chain falls back to the EASU compute pass when a backend cannot
-// be created or its dispatch fails. Owner: agent G (src/gpu/backends).
+// be created or its dispatch fails.
 #pragma once
 #include <cstdint>
 #include <functional>
@@ -27,7 +27,7 @@ struct UpscaleFrame {
     ID3D12Resource* color = nullptr;
     ID3D12Resource* output = nullptr;
     float frameTimeMs = 16.6f;
-    bool reset = true;                      // drop temporal history (video has no motion vectors: see PROGRESSO.md)
+    bool reset = true;                      // drop temporal history (video has no motion vectors: see Fsr4Backend.cpp)
     float sharpness = 0.f;                  // backend-internal sharpening; the chain keeps this 0 and uses RCAS
 };
 

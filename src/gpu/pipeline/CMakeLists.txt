@@ -1,4 +1,4 @@
-# Owned by agent E (shaders: src/gpu/pipeline + shaders/ + tests/pipeline). Target fluvi_pipeline: compute passes with
+# Shaders: src/gpu/pipeline + shaders/ + tests/pipeline. Target fluvi_pipeline: compute passes with
 # HLSL compiled at build time (dxc, cs_6_0) into generated headers embedded in the library. Depends on
 # fluvi_core only (raw D3D12), not on fluvi_gpu.
 if(NOT FLUVI_DXC)
@@ -32,7 +32,7 @@ foreach(shader IN LISTS FLUVI_PIPELINE_SHADERS)
   list(APPEND FLUVI_PIPELINE_GENERATED "${out}")
 endforeach()
 
-# Vendor upscaler backends (agent G): FSR 4.1.2 through the FidelityFX loader DLL, loaded at run time.
+# Vendor upscaler backends: FSR 4.1.2 through the FidelityFX loader DLL, loaded at run time.
 set(FLUVI_FFX_SIGNEDBIN "${FLUVI_ROOT}/third_party/fidelityfx/sdk/Kits/FidelityFX/signedbin")
 set(FLUVI_FFX_API_INCLUDE "${FLUVI_ROOT}/third_party/fidelityfx/sdk/Kits/FidelityFX/api/include"
                           "${FLUVI_ROOT}/third_party/fidelityfx/sdk/Kits/FidelityFX/upscalers/include"

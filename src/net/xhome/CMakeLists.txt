@@ -1,4 +1,4 @@
-# Agent B (xhome): sign-in, session API, WebRTC session, input protocol. No GPU code.
+# xhome: sign-in, session API, WebRTC session, input protocol. No GPU code.
 #   fluvi_xhome      static library
 #   fluvi_xhome_cli  sign-in / consoles / wake / probe tool for hand testing
 #   fluvi_xhome_tests (doctest)

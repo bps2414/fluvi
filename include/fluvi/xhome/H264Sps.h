@@ -11,7 +11,7 @@ namespace fluvi::xhome {
 struct H264SpsInfo {
     uint32_t width = 0, height = 0;   // after frame cropping
     uint8_t profileIdc = 0, levelIdc = 0;
-    // Additive (agent F, media): what a slice-header reader needs (frame_num width, colour planes).
+    // What a slice-header reader needs (frame_num width, colour planes).
     uint32_t spsId = 0;
     uint32_t log2MaxFrameNum = 4;            // frame_num is u(log2MaxFrameNum)
     bool frameMbsOnly = true;

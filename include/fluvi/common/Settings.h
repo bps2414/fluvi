@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// Fluvi: user settings. The UI edits them, wave 2 persists them as JSON in %LOCALAPPDATA%\Fluvi\settings.json,
+// Fluvi: user settings. The UI edits them, the app persists them as JSON in %LOCALAPPDATA%\Fluvi\settings.json,
 // the pipeline/session read them. Plain data, copyable.
 #pragma once
 #include <cstdint>
@@ -10,7 +10,7 @@ namespace fluvi {
 enum class StreamResolution : uint8_t { R720p, R1080p, R1440p };
 enum class StreamMode : uint8_t { Play, Smooth };   // "Jogar" (no FG, lowest latency) / "Liso" (FG 30->60)
 
-// Quality presets by GPU power ("leve / padrão / máximo", PLANO §1). The pipeline maps them (ResolveChainConfig in
+// Quality presets by GPU power (Light / Standard / Max). The pipeline maps them (ResolveChainConfig in
 // fluvi/gpu/QualityChain.h): Light = EASU + cheap downscale + no deblock; Standard = FSR 4 only on GPUs where it is
 // cheap, Lanczos3 downscale; Max = FSR 4 wherever the GPU can run it.
 enum class QualityPreset : uint8_t { Light, Standard, Max };
@@ -28,7 +28,7 @@ struct VideoSettings {
     float sharpness = 0.6f;            // 0 = off .. 1 = max (pipeline maps to RCAS stops)
     bool fullscreen = true;            // borderless fullscreen (never exclusive)
     bool switchRefreshInFullscreen = false;   // no VRR: switch the monitor to 120 Hz in fullscreen, restore on exit
-    // Wave 2 (agent G); persisted by the app (src/app/SettingsStore.cpp).
+    // Persisted by the app (src/app/SettingsStore.cpp).
     QualityPreset preset = QualityPreset::Standard;   // first run: the app sets it from DetectPreset() (fluvi/gpu/QualityChain.h)
     bool presetDetected = false;       // true once DetectPreset() has chosen `preset` for this machine (first run done)
     UpscalerChoice upscaler = UpscalerChoice::Auto;

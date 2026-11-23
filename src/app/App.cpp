@@ -404,7 +404,7 @@ void AppController::OnStreamFailed(const std::string& reason) {
 
 void AppController::OnStreamEnded(const std::string& reason) {
     // HOOK(reconnect): xhome::reconnectableDisconnect(reason) + ReconnectBudget (DisconnectPolicy.h) decide whether
-    // the main session retries here; for now every end goes back to the consoles list with the reason.
+    // a retry could go here; for now every end goes back to the consoles list with the reason.
     FLUVI_INFO("app", "stream ended: {}", reason);
     streaming_ = false;
     if (hooks_.streamStopped) hooks_.streamStopped();

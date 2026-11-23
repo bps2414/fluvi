@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Fluvi gpu-core: the D3D12 device and its queues, descriptors, textures and command recording.
-// Owner: agent A (src/gpu/core). Interface first; the implementation is free behind it.
+// Interface first; the implementation is free behind it.
 #pragma once
 #include <cstdint>
 #include <memory>

@@ -23,7 +23,7 @@
 
 namespace fluvi::app {
 
-// Where the main session plugs the rest of the pipeline in. Set before Start(); callbacks may run on any thread.
+// Where main.cpp plugs the rest of the pipeline in. Set before Start(); callbacks may run on any thread.
 struct AppHooks {
     StreamHooks stream;                                       // HOOK(decode) video/audio, HOOK(chain) connected/closing
     std::function<void(StreamMode)> modeChanged;              // overlay toggle or hotkey: Jogar <-> Liso in the pipeline

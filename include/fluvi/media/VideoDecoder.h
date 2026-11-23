@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// Fluvi media: H.264 Annex-B access units in, NV12 textures on the gpu-core device out. Owner: agent F
-// (src/media, include/fluvi/media). Recovery logic after Veyra's XboxSessionSource (GPL-3.0-only, c6633121).
+// Fluvi media: H.264 Annex-B access units in, NV12 textures on the gpu-core device out.
+// Recovery logic after Veyra's XboxSessionSource (GPL-3.0-only, c6633121).
 //
 // Flow (one decode thread, short drop-oldest queues on both sides, nothing accumulates):
 //   Push(AU) -> [input LatestQueue, 8] -> decode thread:

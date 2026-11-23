@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Fluvi gpu-core: flip-model swapchain, frame-latency waitable, tearing, borderless fullscreen, and the
-// numbers that prove the frame really reached the screen (present mode, intervals). Owner: agent A.
+// numbers that prove the frame really reached the screen (present mode, intervals).
 // Lesson from Veyra #241: AMD fell into "Composed Flip" (75 ms hitches). We aim for Independent Flip and
 // always report the mode we actually got.
 #pragma once

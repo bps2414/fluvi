@@ -1,4 +1,4 @@
-# Owned by agent D (input). Targets: fluvi_input (static) and fluvi_pad_probe (manual tool).
+# Targets: fluvi_input (static) and fluvi_pad_probe (manual tool).
 # GameInput.dll and xinput1_4.dll are loaded at run time (no import libraries): GameInput is inbox on Windows 11;
 # on older systems Start() fails and the factory falls back to XInput. Only avrt (MMCSS) is linked.
 add_library(fluvi_input STATIC

@@ -4,12 +4,12 @@
 // Threads: main = render (this file), Window = Win32 messages, AppController tasks = network, StreamController =
 // session, GamepadReader = pad, libdatachannel's own. Nothing but this thread touches the GPU.
 //
-// Stream video (wave 2 integration, main session):
+// Stream video:
 //   session AUs -> media::VideoDecoder (own thread, NV12 + isNew) -> render thread: NewFrameGate -> QualityChain
 //   (NV12 -> RGB -> deblock -> downscale / 1:1 / FSR 4 or EASU -> RCAS, into `out` at the window size) -> copy into
 //   the back buffer -> UI overlay on top -> Present now (tearing / VRR) when a picture was processed, vsync 1 when
 //   only the UI changed. Nothing is presented while streaming if neither changed (the window follows the content).
-//   Audio: session Opus packets -> audio::OpusPlayer (WASAPI). Smooth mode (FG) and the present clock are wave 3.
+//   Audio: session Opus packets -> audio::OpusPlayer (WASAPI). Smooth mode (FG) paces through the present clock.
 #include <windows.h>
 #include <timeapi.h>
 
@@ -416,7 +416,7 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
             if (shown) shown->ReleaseAfter(ctx->Fence(), submitted);
             shown = fresh;
         }
-        // A new picture goes out at once (tearing / VRR); UI-only frames keep vsync. Wave 3 adds the present clock.
+        // A new picture goes out at once (tearing / VRR); UI-only frames keep vsync.
         const gpu::PresentRequest pr = (processed || presentReal) ? gpu::PresentRequest{0, true} : gpu::PresentRequest{1, false};
         if (Status ps = swap->Present(pr); !ps) {
             FLUVI_ERROR("app", "present: {}", ps.message);

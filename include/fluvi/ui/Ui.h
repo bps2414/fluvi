@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Fluvi ui: RmlUi 6.3 drawn inside our D3D12 frame (same swapchain as the stream, no extra window).
-// Owner: agent C (src/ui, assets/ui). Screens live in assets/ui/*.rml + *.rcss, editable without rebuild.
+// Screens live in assets/ui/*.rml + *.rcss, editable without rebuild.
 //
 // Threading: HandleMessage() is called on the window thread and only enqueues. The Set*() model setters
 // are thread-safe (copied under a lock). Update() and Record() run on the render thread; callbacks fire

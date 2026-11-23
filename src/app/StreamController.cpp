@@ -189,7 +189,7 @@ private:
                 if (!rtc->waitReady(10s)) { fail("A conexão com o console abriu, mas a transmissão não começou. Tente de novo; se repetir, reinicie o console."); goto cleanup; }
                 rtc->requestKeyframe();
 
-                // HOOK(chain): the decoder and the QualityChain are created here by the main session.
+                // HOOK(chain): the decoder and the QualityChain are created here by main.cpp.
                 if (hooks.connected) hooks.connected(*rtc, cfg);
                 hooked = true;
                 streaming_ = Live(*a);

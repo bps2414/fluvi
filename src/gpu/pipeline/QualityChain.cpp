@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Fluvi pipeline: the quality chain, presets, GPU detection and the new-frames gate (contract:
-// include/fluvi/gpu/QualityChain.h). Owner: agent G. Builds on the passes of ImagePasses.cpp.
+// include/fluvi/gpu/QualityChain.h). Builds on the passes of ImagePasses.cpp.
 #include "fluvi/gpu/QualityChain.h"
 
 #include <algorithm>
