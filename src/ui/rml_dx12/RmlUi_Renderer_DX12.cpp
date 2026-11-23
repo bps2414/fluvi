@@ -161,9 +161,13 @@ Texture2D g_InputTexture : register(t0);
 SamplerState g_SamplerLinear : register(s0);
 
 
-float4 main(const PS_INPUT inputArgs) : SV_TARGET 
-{ 
-	return g_InputTexture.Sample(g_SamplerLinear, inputArgs.uv); 
+float4 main(const PS_INPUT inputArgs) : SV_TARGET
+{
+#ifdef FLUVI_OPAQUE
+	return float4(g_InputTexture.Sample(g_SamplerLinear, inputArgs.uv).rgb, 1.0);
+#else
+	return g_InputTexture.Sample(g_SamplerLinear, inputArgs.uv);
+#endif
 }
 )";
 
@@ -701,6 +705,7 @@ enum class ProgramId : int {
 	Blur,
 	DropShadow,
 	Present_ToTarget, // Fluvi: final copy onto the caller's target (its format, no MSAA, no blend)
+	Backdrop_Opaque,  // Fluvi: the target copied into the base layer with alpha forced to 1
 	Count
 };
 
@@ -1167,7 +1172,7 @@ bool RenderInterface_DX12::BeginFrame(ID3D12GraphicsCommandList* p_list, ID3D12R
 	}
 
 	BindRenderTarget(m_manager_render_layer.GetTopLayer(), false);
-	UseProgram(ProgramId::Passthrough_NoBlend);
+	UseProgram(ProgramId::Backdrop_Opaque);
 	BindTexture(m_backdrop_handle);
 	DrawFullscreenQuad();
 	BindRenderTarget(m_manager_render_layer.GetTopLayer());
@@ -5879,6 +5884,33 @@ void RenderInterface_DX12::Create_Resource_Pipeline_Passthrough_NoBlend()
 		m_root_signatures[static_cast<int>(ProgramId::Present_ToTarget)]->AddRef();
 		status = m_p_device->CreateGraphicsPipelineState(&desc_pipeline, IID_PPV_ARGS(&m_pipelines[static_cast<int>(ProgramId::Present_ToTarget)]));
 		RMLUI_DX_VERIFY_MSG(status, "failed to CreateGraphicsPipelineState (Present_ToTarget)");
+
+		// Fluvi: the base layer starts as a copy of the target with alpha forced to 1. The frame FSR FG generates
+		// carries another alpha, and backdrop-filter (blur + blend) reads it: the glass and the corner pill flickered
+		// in Liso, on generated frames only.
+		{
+			ID3DBlob* p_opaque{};
+			ID3DBlob* p_opaque_error{};
+			const D3D_SHADER_MACRO opaque_macros[] = {{"FLUVI_OPAQUE", "1"}, {nullptr, nullptr}};
+			status = D3DCompile(pShaderSourceText_Pixel_Passthrough, sizeof(pShaderSourceText_Pixel_Passthrough), nullptr, opaque_macros,
+				nullptr, "main", "ps_5_0", m_default_shader_flags, 0, &p_opaque, &p_opaque_error);
+			if (p_opaque_error)
+				p_opaque_error->Release();
+			RMLUI_DX_VERIFY_MSG(status, "failed to D3DCompile (Backdrop_Opaque)");
+			if (SUCCEEDED(status) && p_opaque)
+			{
+				desc_pipeline.PS = {p_opaque->GetBufferPointer(), p_opaque->GetBufferSize()};
+				desc_pipeline.RTVFormats[0] = RMLUI_RENDER_BACKEND_FIELD_COLOR_TEXTURE_FORMAT;
+				desc_pipeline.SampleDesc = m_desc_sample;
+				desc_pipeline.pRootSignature = m_root_signatures[static_cast<int>(ProgramId::Passthrough_NoBlend)];
+				m_root_signatures[static_cast<int>(ProgramId::Backdrop_Opaque)] = m_root_signatures[static_cast<int>(ProgramId::Passthrough_NoBlend)];
+				m_root_signatures[static_cast<int>(ProgramId::Backdrop_Opaque)]->AddRef();
+				status = m_p_device->CreateGraphicsPipelineState(&desc_pipeline,
+					IID_PPV_ARGS(&m_pipelines[static_cast<int>(ProgramId::Backdrop_Opaque)]));
+				RMLUI_DX_VERIFY_MSG(status, "failed to CreateGraphicsPipelineState (Backdrop_Opaque)");
+				p_opaque->Release();
+			}
+		}
 
 #ifdef RMLUI_DX_DEBUG
 		m_root_signatures[static_cast<int>(ProgramId::Passthrough_NoBlend)]->SetName(TEXT("rs of Passthrough_NoBlend"));

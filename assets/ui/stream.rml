@@ -23,9 +23,10 @@
 			font-size: var(--t-xs);
 			color: var(--bank);
 			opacity: 0;
+			visibility: hidden;   /* hidden = not drawn at all (no blur pass under it) */
 			transition: opacity var(--d-base) cubic-out;
 		}
-		.corner.show { opacity: 1; }
+		.corner.show { opacity: 1; visibility: visible; }
 		.corner .label-brand { margin-right: var(--s2); }
 		.corner .v { font-weight: 600; color: var(--foam); }
 		.corner .u { margin-right: var(--s2); }
@@ -35,9 +36,10 @@
 			position: absolute; top: 0dp; left: 0dp; right: 0dp; bottom: 0dp;
 			decorator: linear-gradient(90deg, var(--scrim-clear) 40%, var(--scrim));
 			opacity: 0;
+			visibility: hidden;
 			transition: opacity var(--d-slow) cubic-out;
 		}
-		.scrim.open { opacity: 1; }
+		.scrim.open { opacity: 1; visibility: visible; }
 
 		/* The overlay: a pane of frosted river glass sliding in from the right edge. */
 		.glass
@@ -54,12 +56,13 @@
 			border: 1.5dp var(--glass-line);
 			box-shadow: var(--shadow-panel);
 			opacity: 0;
+			visibility: hidden;   /* closed: not drawn (its blur and shadow showed through, flickering, in Liso) */
 			transform: translateX(48dp);
 			transition: opacity transform var(--d-slow) cubic-out;
 			display: flex;
 			flex-direction: column;
 		}
-		.glass.open { opacity: 1; transform: translateX(0dp); }
+		.glass.open { opacity: 1; visibility: visible; transform: translateX(0dp); }
 
 		.head { display: flex; flex-direction: row; align-items: center; justify-content: space-between; }
 		.head .brand-name { font-size: var(--t-lg); }
@@ -206,7 +209,7 @@
 			<button class="danger" id="stream-disconnect" data-event-click="disconnect">Desconectar</button>
 		</div>
 		<div class="hint">
-			<span><span class="keycap">{{ stream.hk_overlay }}</span>fecha o painel</span>
+			<span><span class="keycap">{{ stream.hk_overlay }}</span>ou<span class="keycap">View + Menu</span>fecha o painel</span>
 			<span><span class="keycap">{{ stream.hk_mode }}</span>troca o modo</span>
 		</div>
 	</div>

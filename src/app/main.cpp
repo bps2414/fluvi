@@ -229,6 +229,7 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
         fgOut.reset();
     };
     int statsTicks = 0;
+    int64_t lastPresentQpc = 0;
 
     app::PadNav nav;
     const int64_t start = time::NowQpc();
@@ -343,14 +344,17 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
                 stash = std::move(fresh);   // processed on the next pass, after the real frame is out
                 fresh = nullptr;
             } else {
-                if (!fresh && !uiAnimating && haveOutput) {
+                // A still picture (a menu: every frame a repeat) must not starve the UI: F1/F2 and the corner notice
+                // are handled in ui->Update(), so a UI-only frame goes out at least every 50 ms.
+                const bool uiDue = time::ElapsedMs(lastPresentQpc, time::NowQpc()) > 50.0;
+                if (!fresh && !uiAnimating && haveOutput && !uiDue) {
                     // Nothing to show: wait for the decoder instead of spinning (the loop still services the pad).
                     fresh = decoder->WaitPop(8);
                     if (!fresh) continue;
-                    if (smooth && !fresh->isNew) continue;
                 }
+                if (fresh && smooth && !fresh->isNew && haveOutput) fresh = nullptr;   // Liso: a repeat carries nothing new
                 if (fresh) decision = gate.OnFrame(fresh->isNew, nowMs, !haveOutput);
-                if (!decision.process && !uiAnimating && haveOutput) continue;   // a repeat, "only new frames" on
+                if (!decision.process && !uiAnimating && haveOutput && !uiDue) continue;   // a repeat, "only new frames" on
             }
         }
 
@@ -419,6 +423,7 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
             if (FAILED(device->CheckRemoved())) { Fatal("A placa de vídeo foi reiniciada pelo Windows. Abra o Fluvi de novo."); rc = 2; }
             break;
         }
+        lastPresentQpc = time::NowQpc();
         if (showGenerated) {
             realPending = true;
             realDueQpc = time::NowQpc() + time::MsToQpc(contentMs * 0.5);

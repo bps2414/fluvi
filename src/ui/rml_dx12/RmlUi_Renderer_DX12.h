@@ -30,7 +30,7 @@ class RenderInterface_DX12 : public Rml::RenderInterface {
 private:
 	static constexpr uint32_t InvalidConstantBuffer_RootParameterIndex = std::numeric_limits<uint32_t>::max();
 	static constexpr uint8_t MaxConstantBuffersPerShader = 3;
-	static constexpr size_t NumPrograms = 24; // Fluvi: +Present_ToTarget
+	static constexpr size_t NumPrograms = 25; // Fluvi: +Present_ToTarget, +Backdrop_Opaque
 
 public:
 	struct GraphicsAllocationInfo {
