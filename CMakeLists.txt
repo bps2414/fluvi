@@ -26,9 +26,11 @@ enable_testing()
 find_package(doctest CONFIG REQUIRED)
 
 # Core: logging, clock.
-add_library(fluvi_core STATIC src/core/Log.cpp src/core/Time.cpp)
+find_package(nlohmann_json CONFIG REQUIRED)
+add_library(fluvi_core STATIC src/core/Log.cpp src/core/Time.cpp src/core/I18n.cpp)
 fluvi_defaults(fluvi_core)
 target_include_directories(fluvi_core PUBLIC "${FLUVI_ROOT}/include")
+target_link_libraries(fluvi_core PRIVATE nlohmann_json::nlohmann_json)
 
 fluvi_module(gpu      src/gpu)           # gpu-core + present  -> fluvi_gpu
 fluvi_module(pipeline src/gpu/pipeline)  # passes + shaders    -> fluvi_pipeline
