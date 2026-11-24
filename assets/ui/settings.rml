@@ -1,184 +1,215 @@
 <rml>
 <!-- SPDX-License-Identifier: GPL-3.0-only -->
 <head>
-	<title>Configurações</title>
-	<link type="text/rcss" href="theme.rcss"/>
+	<title>settings</title>
+	<link type="text/template" href="shell.rml"/>
 	<style>
-		/* Frosted water over whatever is behind (the stream, or the app background). */
-		body
-		{
-			background-color: var(--bed-frost);
-			backdrop-filter: blur(var(--blur-lg));
-		}
-		.page
+		/* Layout only: values come from theme.rcss tokens. Frosted river over whatever is behind it (the stream when
+		   opened from the overlay, the bed otherwise). */
+		body { background-color: var(--bed-frost); backdrop-filter: blur(var(--blur-lg)); }
+
+		.nav
 		{
 			position: absolute;
-			top: 168dp; bottom: 0dp; left: var(--margin); right: var(--s8);
+			top: var(--s5); bottom: var(--s4); left: var(--margin);
+			width: 300dp;
+			display: flex;
+			flex-direction: column;
 		}
+		.nav-head { display: flex; flex-direction: row; align-items: center; gap: var(--s2); margin-bottom: var(--s3); }
+		.nav-head h1 { font-size: var(--t-xl); }
+		.navitem
+		{
+			display: flex;
+			flex-direction: row;
+			align-items: center;
+			gap: var(--s3);
+			box-sizing: border-box;
+			height: var(--target);
+			padding: 0dp var(--s4);
+			margin-bottom: var(--s0);
+			border-radius: var(--r-row);
+			color: var(--bank);
+			font-weight: 600;
+			border: 2dp transparent;
+			transition: background-color color border-color var(--d-fast) cubic-out;
+		}
+		.navitem .icon { color: var(--silt); }
+		.navitem:hover { background-color: var(--water); color: var(--foam); }
+		.navitem.on { background-color: var(--water-hi); color: var(--foam); }
+		.navitem.on .icon { color: var(--brand); }
+		.navitem:focus-visible { border-color: var(--brand); color: var(--foam); box-shadow: var(--glow-focus); }
+		.navitem.lang { height: auto; min-height: var(--target); padding-top: var(--s2); padding-bottom: var(--s2); }
+		.navitem .lang-value { font-size: var(--t-xs); font-weight: normal; color: var(--bank); }
+		.spacer { flex: 1; }
+		.hints { left: 412dp; }
 
-		.side { position: absolute; top: 0dp; left: 0dp; width: 400dp; }
-		.side .lead { margin-top: var(--s4); font-size: var(--t-md); }
-		.side .back { margin-top: var(--s6); }
-
-		/* The rows used to shrink to their padding: the scrollbar had no style (fixed in theme.rcss) and took the
-		   list's whole width. left = .side width + --s9. */
 		.list
 		{
 			position: absolute;
-			top: 0dp; bottom: 0dp; left: 496dp; right: 0dp;
-			max-width: 1000dp;
+			top: var(--s5); bottom: var(--s8); left: 412dp; right: var(--margin);   /* ends above the key hints */
 			overflow-y: auto;
-			padding: var(--s1) var(--s4) var(--s9) var(--s1);
+			padding: var(--s1) var(--s3) var(--s4) var(--s1);
 		}
-		.group { margin-top: var(--s7); margin-bottom: var(--s3); font-size: var(--t-sm); }
-		.group.first { margin-top: 0dp; }
+		.list h2 { margin-bottom: var(--s1); }
+		.list .intro { color: var(--bank); margin-bottom: var(--s5); }
 
-		.row
-		{
-			display: flex; flex-direction: row; align-items: center;
-			box-sizing: border-box;
-			min-height: 80dp;
-			padding: var(--s3) var(--s5);
-			margin-bottom: var(--s1h);
-			border-radius: var(--r-row);
-			background-color: var(--water);
-			border: 2dp transparent;
-			nav-left: none;
-			nav-right: none;
-			transition: background-color border-color var(--d-fast) cubic-out;
-		}
-		.row:hover { background-color: var(--water-hi); }
-		.row:focus-visible { border-color: var(--brand); background-color: var(--water-hi); box-shadow: var(--glow-row); }
-		.row .label { flex: 1 1 auto; min-width: 0dp; padding-right: var(--s5); }
-		.row .stepper, .row .switch { flex: 0 0 auto; }
-		.row .label .t { font-weight: 600; font-size: var(--t-md); }
-		.row .label .d { font-size: var(--t-xs); color: var(--silt); margin-top: var(--s0); }
+		.keys .row { cursor: arrow; }
+		.keys .control { justify-content: flex-end; gap: var(--s1h); }
 
-		.stepper { display: flex; flex-direction: row; align-items: center; gap: var(--s2); }
-		.arrow
-		{
-			width: 40dp; height: 40dp; line-height: 36dp;
-			border-radius: var(--r-pill);
-			text-align: center;
-			font-size: var(--t-lg);
-			color: var(--silt);
-			cursor: pointer;
-			transition: color background-color var(--d-fast) cubic-out;
-		}
-		.arrow:hover { color: var(--foam); background-color: var(--water-hi); }
-		.row:focus-visible .arrow { color: var(--brand); }
-		.value { width: 180dp; text-align: center; font-weight: 600; }
-		.value-wrap { width: 180dp; }
-
-		.keys { display: flex; flex-direction: row; flex-wrap: wrap; gap: var(--s1h); }
-		.key
-		{
-			display: flex; flex-direction: row; align-items: center; justify-content: space-between;
-			width: 482dp; box-sizing: border-box;
-			padding: var(--s3) var(--s5);
-			border-radius: var(--r-row);
-			background-color: var(--water);
-			color: var(--bank);
-			font-size: var(--t-sm);
-		}
+		.about .version { font-size: var(--t-md); font-weight: 600; margin-bottom: var(--s5); }
+		.credit { padding: var(--s3) 0dp; border-bottom: 1dp var(--line); }
+		.credit .t { font-weight: 600; }
+		.credit .d { font-size: var(--t-xs); color: var(--bank); margin-top: var(--s0); }
 	</style>
 </head>
-<body data-model="fluvi">
-	<div class="topbar">
-		<div class="brand">
-			<div class="brand-mark"><div class="w w1"></div><div class="w w2"></div><div class="w w3"></div></div>
-			<div class="brand-name">Fluvi</div>
+<body template="shell" data-model="fluvi">
+	<div class="nav arrive">
+		<div class="nav-head">
+			<button class="ghost icon-only" id="settings-back" data-event-click="close_settings"><span class="icon">&#xE058;</span></button>
+			<h1>[settings.title]</h1>
 		</div>
+		<div class="navitem" id="nav-video" data-class-on="set.section == 0" data-event-focus="section(0)" data-event-click="section(0)"><span class="icon">&#xE58C;</span><span>[settings.nav_video]</span></div>
+		<div class="navitem" id="nav-smooth" data-class-on="set.section == 1" data-event-focus="section(1)" data-event-click="section(1)"><span class="icon">&#xE6DE;</span><span>[settings.nav_smooth]</span></div>
+		<div class="navitem" id="nav-pad" data-class-on="set.section == 2" data-event-focus="section(2)" data-event-click="section(2)"><span class="icon">&#xE26E;</span><span>[settings.nav_controller]</span></div>
+		<div class="navitem" id="nav-audio" data-class-on="set.section == 3" data-event-focus="section(3)" data-event-click="section(3)"><span class="icon">&#xE44A;</span><span>[settings.nav_audio]</span></div>
+		<div class="navitem" id="nav-keys" data-class-on="set.section == 4" data-event-focus="section(4)" data-event-click="section(4)"><span class="icon">&#xE2D8;</span><span>[settings.nav_keys]</span></div>
+		<div class="navitem" id="nav-stats" data-class-on="set.section == 5" data-event-focus="section(5)" data-event-click="section(5)"><span class="icon">&#xE154;</span><span>[settings.nav_stats]</span></div>
+		<div class="navitem" id="nav-about" data-class-on="set.section == 6" data-event-focus="section(6)" data-event-click="section(6)"><span class="icon">&#xE2CE;</span><span>[settings.nav_about]</span></div>
+		<div class="spacer"></div>
+		<div class="navitem lang" id="nav-language" data-setting="language"><span class="icon">&#xE4A2;</span><div><div>[settings.language]</div><div class="lang-value">{{ set.language }}</div></div></div>
 	</div>
 
-	<div class="page arrive">
-		<div class="side">
-			<h1>Configurações</h1>
-			<div class="lead">Valem na hora. Resolução e bitrate entram na próxima conexão.</div>
-			<button class="back" id="settings-back" data-event-click="close_settings">Voltar</button>
+	<div class="list arrive">
+		<!-- Placeholders in the rows' real shape until the app sends the settings. -->
+		<div data-if="!set.loaded">
+			<div class="skeleton-line display w-40"></div>
+			<div class="skeleton-card flat"><div><div class="skeleton-line w-40"></div><div class="skeleton-line w-80"></div></div><div class="skeleton-line chip"></div></div>
+			<div class="skeleton-card flat"><div><div class="skeleton-line w-20"></div><div class="skeleton-line w-60"></div></div><div class="skeleton-line chip"></div></div>
+			<div class="skeleton-card flat"><div><div class="skeleton-line w-40"></div><div class="skeleton-line w-80"></div></div><div class="skeleton-line chip"></div></div>
+			<div class="skeleton-card flat"><div><div class="skeleton-line w-40"></div><div class="skeleton-line w-60"></div></div><div class="skeleton-line chip"></div></div>
 		</div>
 
-		<div class="list">
-			<!-- Placeholders in the rows' real shape until the app sends the settings. -->
-			<div data-if="!set.loaded">
-				<div class="skeleton-line w-20"></div>
-				<div class="skeleton-card flat"><div><div class="skeleton-line w-40"></div><div class="skeleton-line w-80"></div></div><div class="skeleton-line chip"></div></div>
-				<div class="skeleton-card flat"><div><div class="skeleton-line w-20"></div><div class="skeleton-line w-60"></div></div><div class="skeleton-line chip"></div></div>
-				<div class="skeleton-card flat"><div><div class="skeleton-line w-40"></div><div class="skeleton-line w-80"></div></div><div class="skeleton-line chip"></div></div>
-				<div class="skeleton-card flat"><div><div class="skeleton-line w-40"></div><div class="skeleton-line w-60"></div></div><div class="skeleton-line chip"></div></div>
-				<div class="skeleton-card flat"><div><div class="skeleton-line w-20"></div><div class="skeleton-line w-40"></div></div><div class="skeleton-line chip"></div></div>
-			</div>
-			<div data-if="set.loaded">
-			<div class="group label-brand first">Vídeo</div>
+		<!-- Video -->
+		<div data-if="set.loaded &amp;&amp; set.section == 0">
+			<h2>[settings.nav_video]</h2>
+			<div class="intro">[settings.video_intro]</div>
 			<div class="row" autofocus="" id="set-resolution" data-setting="resolution">
-				<div class="label"><div class="t">Resolução do stream</div><div class="d">1440p reduzido para a sua tela fica mais nítido que 1080p</div></div>
-				<div class="stepper"><div class="arrow" data-dir="-1">‹</div><div class="value">{{ set.resolution }}</div><div class="arrow" data-dir="1">›</div></div>
+				<div class="label"><div class="t">[settings.resolution]</div><div class="d">[settings.resolution_d]</div><div class="next"><span class="icon">&#xE19A;</span><span>[settings.next_connection]</span></div></div>
+				<div class="control"><div class="stepper"><div class="arrow" data-dir="-1">&#xE138;</div><div class="value">{{ set.resolution }}</div><div class="arrow" data-dir="1">&#xE13A;</div></div></div>
 			</div>
 			<div class="row" id="set-bitrate" data-setting="bitrate">
-				<div class="label"><div class="t">Bitrate</div><div class="d">Automático usa o máximo que o console aceita</div></div>
-				<div class="stepper"><div class="arrow" data-dir="-1">‹</div><div class="value">{{ set.bitrate }}</div><div class="arrow" data-dir="1">›</div></div>
-			</div>
-			<div class="row" id="set-mode" data-setting="mode">
-				<div class="label"><div class="t">Modo ao conectar</div><div class="d">Jogar tem a menor latência. Liso gera quadros para chegar a 60 fps.</div></div>
-				<div class="stepper"><div class="arrow" data-dir="-1">‹</div><div class="value">{{ set.mode }}</div><div class="arrow" data-dir="1">›</div></div>
-			</div>
-			<div class="row" id="set-deblock" data-setting="deblock">
-				<div class="label"><div class="t">Redução de blocos</div><div class="d">Suaviza os artefatos de compressão</div></div>
-				<div class="stepper"><div class="arrow" data-dir="-1">‹</div><div class="value-wrap"><div class="value">{{ set.deblock }}</div><div class="meter"><div class="fill" data-style-width="set.deblock_pct + '%'"></div></div></div><div class="arrow" data-dir="1">›</div></div>
-			</div>
-			<div class="row" id="set-sharpness" data-setting="sharpness">
-				<div class="label"><div class="t">Nitidez</div><div class="d">Aplicada depois de ajustar a imagem à sua tela</div></div>
-				<div class="stepper"><div class="arrow" data-dir="-1">‹</div><div class="value-wrap"><div class="value">{{ set.sharpness }}</div><div class="meter"><div class="fill" data-style-width="set.sharpness_pct + '%'"></div></div></div><div class="arrow" data-dir="1">›</div></div>
+				<div class="label"><div class="t">[settings.bitrate]</div><div class="d">[settings.bitrate_d]</div><div class="next"><span class="icon">&#xE19A;</span><span>[settings.next_connection]</span></div></div>
+				<div class="control"><div class="stepper"><div class="arrow" data-dir="-1">&#xE138;</div><div class="value">{{ set.bitrate }}</div><div class="arrow" data-dir="1">&#xE13A;</div></div></div>
 			</div>
 			<div class="row" id="set-preset" data-setting="preset">
-				<div class="label"><div class="t">Qualidade da imagem</div><div class="d">Leve poupa a placa de vídeo. Máximo usa o melhor ampliador que ela aguentar.</div></div>
-				<div class="stepper"><div class="arrow" data-dir="-1">‹</div><div class="value">{{ set.preset }}</div><div class="arrow" data-dir="1">›</div></div>
+				<div class="label"><div class="t">[settings.preset]</div><div class="d">[settings.preset_d]</div></div>
+				<div class="control"><div class="stepper"><div class="arrow" data-dir="-1">&#xE138;</div><div class="value">{{ set.preset }}</div><div class="arrow" data-dir="1">&#xE13A;</div></div></div>
 			</div>
 			<div class="row" id="set-upscaler" data-setting="upscaler">
-				<div class="label"><div class="t">Ampliação</div><div class="d">Só vale quando a tela é maior que o stream. Automática segue a qualidade.</div></div>
-				<div class="stepper"><div class="arrow" data-dir="-1">‹</div><div class="value">{{ set.upscaler }}</div><div class="arrow" data-dir="1">›</div></div>
+				<div class="label"><div class="t">[settings.upscaler]</div><div class="d">[settings.upscaler_d]</div></div>
+				<div class="control"><div class="stepper"><div class="arrow" data-dir="-1">&#xE138;</div><div class="value">{{ set.upscaler }}</div><div class="arrow" data-dir="1">&#xE13A;</div></div></div>
 			</div>
-			<div class="row" id="set-newframes" data-setting="newframes">
-				<div class="label"><div class="t">Mostrar só quadros novos</div><div class="d">No modo Jogar, para usar com o Lossless Scaling</div></div>
-				<div class="switch" data-class-on="set.newframes_on"><div class="knob"></div></div>
+			<div class="row" id="set-deblock" data-setting="deblock">
+				<div class="label"><div class="t">[settings.deblock]</div><div class="d">[settings.deblock_d]</div></div>
+				<div class="control"><div class="stepper"><div class="arrow" data-dir="-1">&#xE138;</div><div class="value-wrap"><div class="value">{{ set.deblock }}</div><div class="meter"><div class="fill" data-style-width="set.deblock_pct + '%'"></div></div></div><div class="arrow" data-dir="1">&#xE13A;</div></div></div>
+			</div>
+			<div class="row" id="set-sharpness" data-setting="sharpness">
+				<div class="label"><div class="t">[settings.sharpness]</div><div class="d">[settings.sharpness_d]</div></div>
+				<div class="control"><div class="stepper"><div class="arrow" data-dir="-1">&#xE138;</div><div class="value-wrap"><div class="value">{{ set.sharpness }}</div><div class="meter"><div class="fill" data-style-width="set.sharpness_pct + '%'"></div></div></div><div class="arrow" data-dir="1">&#xE13A;</div></div></div>
 			</div>
 			<div class="row" id="set-fullscreen" data-setting="fullscreen">
-				<div class="label"><div class="t">Tela cheia</div><div class="d">Sem bordas, sem tirar o Windows do modo normal</div></div>
-				<div class="switch" data-class-on="set.fullscreen_on"><div class="knob"></div></div>
+				<div class="label"><div class="t">[settings.fullscreen]</div><div class="d">[settings.fullscreen_d]</div></div>
+				<div class="control"><div class="switch" data-class-on="set.fullscreen_on"><div class="knob"></div></div></div>
 			</div>
 			<div class="row" id="set-switchhz" data-setting="switchhz">
-				<div class="label"><div class="t">Mudar para 120 Hz em tela cheia</div><div class="d">Para monitores sem VRR. A taxa original volta quando você sai.</div></div>
-				<div class="switch" data-class-on="set.switchhz_on"><div class="knob"></div></div>
+				<div class="label"><div class="t">[settings.switchhz]</div><div class="d">[settings.switchhz_d]</div></div>
+				<div class="control"><div class="switch" data-class-on="set.switchhz_on"><div class="knob"></div></div></div>
 			</div>
+		</div>
 
-			<div class="group label-brand">Controle</div>
-			<div class="row" id="set-rumble" data-setting="rumble">
-				<div class="label"><div class="t">Vibração</div><div class="d">O controle vibra quando o jogo pedir</div></div>
-				<div class="switch" data-class-on="set.rumble_on"><div class="knob"></div></div>
+		<!-- Modes -->
+		<div data-if="set.loaded &amp;&amp; set.section == 1">
+			<h2>[settings.nav_smooth]</h2>
+			<div class="intro">[settings.smooth_intro]</div>
+			<div class="row" autofocus="" id="set-mode" data-setting="mode">
+				<div class="label"><div class="t">[settings.mode]</div><div class="d">[settings.mode_d]</div><div class="next"><span class="icon">&#xE19A;</span><span>[settings.next_connection]</span></div></div>
+				<div class="control"><div class="stepper"><div class="arrow" data-dir="-1">&#xE138;</div><div class="value">{{ set.mode }}</div><div class="arrow" data-dir="1">&#xE13A;</div></div></div>
+			</div>
+			<div class="row" id="set-newframes" data-setting="newframes">
+				<div class="label"><div class="t">[settings.newframes]</div><div class="d">[settings.newframes_d]</div></div>
+				<div class="control"><div class="switch" data-class-on="set.newframes_on"><div class="knob"></div></div></div>
+			</div>
+		</div>
+
+		<!-- Controller -->
+		<div data-if="set.loaded &amp;&amp; set.section == 2">
+			<h2>[settings.nav_controller]</h2>
+			<div class="intro">[settings.controller_intro]</div>
+			<div class="row" autofocus="" id="set-rumble" data-setting="rumble">
+				<div class="label"><div class="t">[settings.rumble]</div><div class="d">[settings.rumble_d]</div></div>
+				<div class="control"><div class="switch" data-class-on="set.rumble_on"><div class="knob"></div></div></div>
 			</div>
 			<div class="row" id="set-strength" data-setting="strength">
-				<div class="label"><div class="t">Força da vibração</div></div>
-				<div class="stepper"><div class="arrow" data-dir="-1">‹</div><div class="value-wrap"><div class="value">{{ set.strength }}</div><div class="meter"><div class="fill" data-style-width="set.strength_pct + '%'"></div></div></div><div class="arrow" data-dir="1">›</div></div>
+				<div class="label"><div class="t">[settings.strength]</div><div class="d">[settings.strength_d]</div></div>
+				<div class="control"><div class="stepper"><div class="arrow" data-dir="-1">&#xE138;</div><div class="value-wrap"><div class="value">{{ set.strength }}</div><div class="meter"><div class="fill" data-style-width="set.strength_pct + '%'"></div></div></div><div class="arrow" data-dir="1">&#xE13A;</div></div></div>
 			</div>
+		</div>
 
-			<div class="group label-brand">Áudio</div>
-			<div class="row" id="set-volume" data-setting="volume">
-				<div class="label"><div class="t">Volume</div></div>
-				<div class="stepper"><div class="arrow" data-dir="-1">‹</div><div class="value-wrap"><div class="value">{{ set.volume }}</div><div class="meter"><div class="fill" data-style-width="set.volume_pct + '%'"></div></div></div><div class="arrow" data-dir="1">›</div></div>
+		<!-- Audio -->
+		<div data-if="set.loaded &amp;&amp; set.section == 3">
+			<h2>[settings.nav_audio]</h2>
+			<div class="intro">[settings.audio_intro]</div>
+			<div class="row" autofocus="" id="set-volume" data-setting="volume">
+				<div class="label"><div class="t">[settings.volume]</div><div class="d">[settings.volume_d]</div></div>
+				<div class="control"><div class="stepper"><div class="arrow" data-dir="-1">&#xE138;</div><div class="value-wrap"><div class="value">{{ set.volume }}</div><div class="meter"><div class="fill" data-style-width="set.volume_pct + '%'"></div></div></div><div class="arrow" data-dir="1">&#xE13A;</div></div></div>
 			</div>
+		</div>
 
-			<div class="group label-brand">Atalhos</div>
-			<div class="keys">
-				<div class="key"><span>Abrir ou fechar o painel</span><span class="keycap">{{ set.hk_overlay }}</span></div>
-				<div class="key"><span>Trocar entre Jogar e Liso</span><span class="keycap">{{ set.hk_mode }}</span></div>
-				<div class="key"><span>Tela cheia</span><span class="keycap">{{ set.hk_full }}</span></div>
-				<div class="key"><span>Painel de diagnóstico</span><span class="keycap">{{ set.hk_debug }}</span></div>
-				<div class="key"><span>Painel pelo controle</span><span><span class="keycap">View</span>+<span class="keycap">Menu</span></span></div>
+		<!-- Shortcuts (read only) -->
+		<div class="keys" data-if="set.loaded &amp;&amp; set.section == 4">
+			<h2>[settings.nav_keys]</h2>
+			<div class="intro">[settings.keys_intro]</div>
+			<div class="row" autofocus="" id="key-overlay"><div class="label"><div class="t">[settings.key_overlay]</div></div><div class="control"><span class="keycap">{{ set.hk_overlay }}</span></div></div>
+			<div class="row" id="key-mode"><div class="label"><div class="t">[settings.key_mode]</div></div><div class="control"><span class="keycap">{{ set.hk_mode }}</span></div></div>
+			<div class="row" id="key-hud"><div class="label"><div class="t">[settings.key_hud]</div></div><div class="control"><span class="keycap">{{ set.hk_hud }}</span></div></div>
+			<div class="row" id="key-full"><div class="label"><div class="t">[settings.key_fullscreen]</div></div><div class="control"><span class="keycap">{{ set.hk_full }}</span></div></div>
+			<div class="row" id="key-debug"><div class="label"><div class="t">[settings.key_debug]</div></div><div class="control"><span class="keycap">{{ set.hk_debug }}</span></div></div>
+			<div class="row" id="key-pad"><div class="label"><div class="t">[settings.key_pad]</div></div><div class="control"><span class="keycap">[settings.pad_view]</span><span class="keycap">[settings.pad_menu]</span></div></div>
+		</div>
+
+		<!-- Corner stats -->
+		<div data-if="set.loaded &amp;&amp; set.section == 5">
+			<h2>[settings.nav_stats]</h2>
+			<div class="intro">[settings.stats_intro]</div>
+			<div class="row" autofocus="" id="set-hud" data-setting="hud">
+				<div class="label"><div class="t">[settings.hud]</div><div class="d">[settings.hud_d]</div></div>
+				<div class="control"><div class="stepper"><div class="arrow" data-dir="-1">&#xE138;</div><div class="value">{{ set.hud }}</div><div class="arrow" data-dir="1">&#xE13A;</div></div></div>
 			</div>
+			<div class="row" id="set-corner" data-setting="corner">
+				<div class="label"><div class="t">[settings.corner]</div><div class="d">[settings.corner_d]</div></div>
+				<div class="control"><div class="stepper"><div class="arrow" data-dir="-1">&#xE138;</div><div class="value">{{ set.corner }}</div><div class="arrow" data-dir="1">&#xE13A;</div></div></div>
 			</div>
+		</div>
+
+		<!-- About -->
+		<div class="about" data-if="set.loaded &amp;&amp; set.section == 6">
+			<h2>[settings.nav_about]</h2>
+			<div class="version">{{ set.version }}</div>
+			<div class="intro">[settings.about_intro]</div>
+			<div class="credit"><div class="t">[settings.credit_veyra]</div><div class="d">[settings.credit_veyra_d]</div></div>
+			<div class="credit"><div class="t">[settings.credit_ffx]</div><div class="d">[settings.credit_ffx_d]</div></div>
+			<div class="credit"><div class="t">[settings.credit_rmlui]</div><div class="d">[settings.credit_rmlui_d]</div></div>
+			<div class="credit"><div class="t">[settings.credit_ffmpeg]</div><div class="d">[settings.credit_ffmpeg_d]</div></div>
+			<div class="credit"><div class="t">[settings.credit_net]</div><div class="d">[settings.credit_net_d]</div></div>
+			<div class="credit"><div class="t">[settings.credit_fonts]</div><div class="d">[settings.credit_fonts_d]</div></div>
+			<div class="credit"><div class="t">[settings.credit_icons]</div><div class="d">[settings.credit_icons_d]</div></div>
 		</div>
 	</div>
 
-	<div class="hints"><span><span class="keycap">←</span><span class="keycap">→</span>muda o valor</span><span><span class="keycap">Esc</span>volta</span></div>
+	<div class="hints">
+		<span class="hint"><span class="keycap kb">[common.key_left_right]</span><span class="padkey gp">&#xE13A;</span><span>[settings.hint_change]</span></span>
+		<span class="hint"><span class="keycap kb">[common.key_esc]</span><span class="padkey gp">B</span><span>[common.back]</span></span>
+	</div>
 </body>
 </rml>

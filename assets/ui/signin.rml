@@ -1,67 +1,59 @@
 <rml>
 <!-- SPDX-License-Identifier: GPL-3.0-only -->
 <head>
-	<title>Entrar</title>
-	<link type="text/rcss" href="theme.rcss"/>
+	<title>signin</title>
+	<link type="text/template" href="shell.rml"/>
 	<style>
 		/* Layout only: values come from theme.rcss tokens. */
-		.stage
+		.page
 		{
 			position: absolute;
-			top: 120dp; left: var(--margin); right: var(--margin); bottom: var(--s9);
+			top: var(--top); left: var(--margin); right: var(--margin); bottom: var(--s8);
 			display: flex;
 			flex-direction: row;
 			align-items: center;
 			justify-content: space-between;
+			gap: var(--s7);
 		}
-		.copy { width: 860dp; }
-		.copy .lead { margin-top: var(--s4); width: 720dp; }
+		.copy { flex: 1 1 auto; max-width: 860dp; }
+		.copy h1 { font-size: var(--t-2xl); }
 
 		/* The two steps really are a sequence, so they are numbered. */
-		.steps { margin-top: var(--s7); }
-		.step { display: flex; flex-direction: row; align-items: flex-start; gap: var(--s4); margin-bottom: var(--s5); }
+		.steps { margin-top: var(--s5); }
+		.step { display: flex; flex-direction: row; align-items: center; gap: var(--s3); margin-bottom: var(--s2); color: var(--bank); }
 		.step .n
 		{
-			width: 34dp; height: 34dp;
-			line-height: 32dp;
+			width: 32dp; height: 32dp;
+			line-height: 30dp;
 			border-radius: var(--r-pill);
 			border: 1.5dp var(--line-hi);
 			text-align: center;
-			font-size: var(--t-sm);
+			font-size: var(--t-xs);
 			font-weight: 600;
-			color: var(--bank);
 		}
-		.step .what { font-size: var(--t-md); color: var(--bank); padding-top: var(--s1); }
 
-		/* The code is the reason this screen exists: it is set like a sign over the water. */
-		.code
-		{
-			margin-top: var(--s2);
-			font-family: "Inter Display";
-			font-weight: bold;
-			font-size: var(--t-hero);
-			letter-spacing: 10dp;
-			line-height: 1;
-			color: var(--foam);
-		}
-		.code.placeholder { color: var(--ghost-text); }
-		.copy .rule-brand { margin-top: var(--s4); width: 640dp; }
+		/* The code is the reason this screen exists: set like a sign over the water. */
+		.code { margin-top: var(--s4); font-size: var(--t-hero); letter-spacing: 6dp; color: var(--foam); white-space: nowrap; }
+		.code.placeholder { color: var(--track); }
+		.code-skeleton { width: 520dp; }
 
-		.status { margin-top: var(--s5); display: flex; flex-direction: row; align-items: center; gap: var(--s3); color: var(--bank); }
-		.status.err { color: var(--danger); }
-		.actions { margin-top: var(--s6); display: flex; flex-direction: row; gap: var(--s3); }
+		.actions { margin-top: var(--s5); display: flex; flex-direction: row; gap: var(--s3); }
+		.status { margin-top: var(--s4); display: flex; flex-direction: row; align-items: center; gap: var(--s3); color: var(--bank); min-height: 30dp; }
+		.status.err { color: var(--danger-text); }
+		.status.err .icon { color: var(--danger); }
+		.status-skeleton { width: 360dp; }
 
-		.qr-slot { width: 440dp; height: 492dp; }
+		.qr-slot { flex: 0 0 auto; width: 340dp; height: 396dp; }
 		.qr
 		{
 			box-sizing: border-box;
-			padding: var(--s6) var(--s6);
+			padding: var(--s5);
 			border-radius: var(--r-panel);
 			background-color: var(--paper);
 			box-shadow: var(--shadow-paper);
 		}
-		.qr img { display: block; width: 384dp; height: 384dp; }
-		.qr .cap { margin-top: var(--s4); text-align: center; color: var(--paper-ink); font-size: var(--t-sm); font-weight: 600; }
+		.qr img { display: block; width: 292dp; height: 292dp; }
+		.qr .cap { margin-top: var(--s3); text-align: center; color: var(--paper-ink); font-size: var(--t-xs); font-weight: 600; }
 		.qr-empty
 		{
 			box-sizing: border-box;
@@ -75,60 +67,58 @@
 			justify-content: center;
 			text-align: center;
 			color: var(--silt);
-			font-size: var(--t-sm);
 		}
 	</style>
 </head>
-<body class="solid" data-model="fluvi">
+<body template="shell" class="solid" data-model="fluvi">
 	<div class="topbar">
-		<div class="brand large">
-			<div class="brand-mark"><div class="w w1"></div><div class="w w2"></div><div class="w w3"></div></div>
-			<div>
-				<div class="brand-name">Fluvi</div>
-				<div class="brand-tag">Do seu console para esta tela</div>
-			</div>
-		</div>
-		<div class="right">
-			<button class="ghost" id="signin-settings" data-event-click="open_settings">Configurações</button>
+		<div class="brand-small" data-if="!chrome.visible"><svg class="mark" src="brand/fluvi-mark.svg"/><svg class="word" src="brand/fluvi-wordmark.svg"/></div>
+		<div data-if="chrome.visible"></div>
+		<div class="actions">
+			<button class="ghost" id="signin-settings" data-event-click="open_settings"><span class="icon">&#xE272;</span><span>[common.settings]</span></button>
+			<button class="ghost" id="signin-quit" data-event-click="quit"><span class="icon">&#xE3DA;</span><span>[common.quit]</span></button>
 		</div>
 	</div>
 
-	<div class="stage arrive">
+	<div class="page arrive">
 		<div class="copy">
-			<h1>Entre com sua conta Microsoft</h1>
-			<div class="lead">Confirme o login no celular ou no computador. Esta tela continua sozinha quando você terminar.</div>
-
+			<h1>[signin.title]</h1>
 			<div class="steps">
-				<div class="step"><div class="n">1</div><div class="what">Abra <span class="label-brand">{{ sign.uri_short }}</span></div></div>
-				<div class="step"><div class="n">2</div><div class="what">Digite o código</div></div>
+				<div class="step"><div class="n">1</div><span>[signin.step_open]</span><span class="label-brand">{{ sign.uri_short }}</span></div>
+				<div class="step"><div class="n">2</div><span>[signin.step_code]</span></div>
 			</div>
 
-			<div class="code" data-if="sign.has_code">{{ sign.code }}</div>
-			<div class="skeleton-line hero" data-if="!sign.has_code &amp;&amp; sign.pending"></div>
-			<div class="code placeholder" data-if="!sign.has_code &amp;&amp; !sign.pending">XXXX-XXXX</div>
-			<div class="rule-brand"></div>
-
-			<div class="status" data-class-err="sign.error">
-				<div class="spinner" data-if="sign.busy"></div>
-				<span data-if="sign.status != ''">{{ sign.status }}</span>
-				<span data-if="sign.status == ''">Escolha Entrar para gerar o seu código.</span>
-			</div>
+			<div class="code condensed" data-if="sign.has_code">{{ sign.code }}</div>
+			<div class="skeleton-line hero code-skeleton" data-if="!sign.has_code &amp;&amp; sign.pending"></div>
+			<div class="code condensed placeholder" data-if="!sign.has_code &amp;&amp; !sign.pending">[signin.code_placeholder]</div>
 
 			<div class="actions">
-				<button class="primary" autofocus="" id="signin-start" data-if="!sign.busy" data-event-click="sign_in">Entrar</button>
-				<button autofocus="" id="signin-cancel" data-if="sign.busy" data-event-click="cancel_sign_in">Cancelar</button>
-				<button class="ghost" id="signin-quit" data-event-click="quit">Fechar o Fluvi</button>
+				<button class="primary" autofocus="" id="signin-start" data-if="!sign.busy" data-event-click="sign_in"><span class="icon">&#xE06C;</span><span>[signin.start]</span></button>
+				<button class="primary" autofocus="" id="signin-browser" data-if="sign.busy &amp;&amp; sign.has_code" data-event-click="open_browser"><span class="icon">&#xE5DE;</span><span>[signin.open_browser]</span></button>
+				<button id="signin-copy" data-if="sign.busy &amp;&amp; sign.has_code" data-event-click="copy_code"><span class="icon">&#xE1CC;</span><span>[signin.copy_code]</span></button>
+				<button class="ghost" id="signin-cancel" data-if="sign.busy" data-event-click="cancel_sign_in"><span>[common.cancel]</span></button>
 			</div>
+
+			<div class="status" data-class-err="sign.error" data-if="!sign.pending">
+				<span class="icon" data-if="sign.error">&#xE4E2;</span>
+				<span data-if="sign.status != ''">{{ sign.status }}</span>
+				<span data-if="sign.status == '' &amp;&amp; !sign.busy">[signin.idle]</span>
+				<span data-if="sign.status == '' &amp;&amp; sign.busy">[signin.waiting]</span>
+			</div>
+			<div class="status" data-if="sign.pending"><div class="skeleton-line status-skeleton"></div></div>
 		</div>
 
 		<div class="qr qr-slot" data-if="sign.has_qr">
 			<img data-attr-src="sign.qr"/>
-			<div class="cap">Ou aponte a câmera do celular</div>
+			<div class="cap">[signin.qr_caption]</div>
 		</div>
 		<div class="skeleton-block qr-slot" data-if="!sign.has_qr &amp;&amp; sign.pending"></div>
-		<div class="qr-empty qr-slot" data-if="!sign.has_qr &amp;&amp; !sign.pending">O QR code aparece aqui junto com o código.</div>
+		<div class="qr-empty qr-slot" data-if="!sign.has_qr &amp;&amp; !sign.pending">[signin.qr_empty]</div>
 	</div>
 
-	<div class="hints"><span><span class="keycap">Enter</span>escolhe</span><span><span class="keycap">Tab</span>próximo</span></div>
+	<div class="hints">
+		<span class="hint"><span class="keycap kb">[common.key_enter]</span><span class="padkey gp">A</span><span>[common.hint_choose]</span></span>
+		<span class="hint"><span class="keycap kb">[common.key_arrows]</span><span class="padkey gp">&#xE13A;</span><span>[common.hint_move]</span></span>
+	</div>
 </body>
 </rml>

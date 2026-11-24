@@ -5,6 +5,7 @@
 #include <chrono>
 
 #include "Models.h"
+#include "fluvi/common/I18n.h"
 #include "fluvi/core/Log.h"
 
 namespace fluvi::app {
@@ -12,8 +13,18 @@ namespace fluvi::app {
 using namespace std::chrono_literals;
 
 namespace {
+constexpr int kWakePolls = 30;          // wake: poll the console list every kWakePollSeconds, up to 90 s
+constexpr int kWakePollSeconds = 3;
+
 // The Xbox gamertag is not exposed by xhome::Account yet; the chip says whose login this is without inventing a name.
-constexpr const char* kAccountChip = "Conta Microsoft";
+std::string AccountChip() { return i18n::Tr("app.account.chip"); }
+
+std::string WakeTimeoutText() { return i18n::Tr("app.err.wakeTimeout", {{"seconds", std::to_string(kWakePolls * kWakePollSeconds)}}); }
+
+bool SamePlacement(const WindowSettings& a, const WindowSettings& b) {
+    return a.hasPlacement == b.hasPlacement && a.x == b.x && a.y == b.y && a.width == b.width && a.height == b.height &&
+           a.maximized == b.maximized;
+}
 }
 
 AppController::AppController(ui::Ui& ui, AppSettings settings, std::string rawSettings, std::filesystem::path settingsFile, bool saveInitial)
@@ -71,13 +82,29 @@ void AppController::Start() {
     if (pad_ && !pad_->Start([this](const input::GamepadEvent& e) { OnPad(e); }))
         FLUVI_WARN("app", "pad reader did not start; the UI keeps working with keyboard and mouse");
 
+    // The splash is up while the stored login is checked; the UI keeps it long enough for its entrance to play.
+    if (ui_.CurrentScreen() != ui::Screen::Splash) ui_.ShowScreen(ui::Screen::Splash);
+    ui_.SetSplashStatus(i18n::Tr("app.splash.checking"));
     if (account_->signedIn()) {
-        ui_.ShowScreen(ui::Screen::Consoles);
-        RefreshConsoles();
+        tasks_.Run([this] { CheckStoredAccount(); });
     } else {
         ui_.SetSignIn({});
         ui_.ShowScreen(ui::Screen::SignIn);
     }
+}
+
+// Splash task: refreshes the saved login if it is stale (network), then moves to the consoles. An expired login goes to
+// sign-in (HandleExpiredLogin); being offline still shows the list, with its error and Refresh.
+void AppController::CheckStoredAccount() {
+    try {
+        EnsureApi();
+    } catch (const std::exception& e) {
+        if (HandleExpiredLogin(e)) return;
+        FLUVI_WARN("app", "account check: {}", e.what());
+    }
+    if (quit_.load()) return;
+    RefreshConsoles();
+    ui_.ShowScreen(ui::Screen::Consoles);
 }
 
 void AppController::Shutdown() {
@@ -109,20 +136,38 @@ void AppController::InstallCallbacks() {
         if (hooks_.modeChanged) hooks_.modeChanged(m);   // HOOK(chain): switch the pipeline (not persisted: it is per session)
     };
     cb.quit = [this] { quit_ = true; };
+    cb.wakeAndConnect = [this](const std::string& id) { WakeAndConnect(id); };
+    cb.minimize = [this] { if (hooks_.minimize) hooks_.minimize(); };
+    cb.toggleMaximize = [this] { if (hooks_.toggleMaximize) hooks_.toggleMaximize(); };
     ui_.SetCallbacks(std::move(cb));
 }
 
 // ---- settings ----------------------------------------------------------------------------------------------------
 
-void AppController::SettingsChanged(const AppSettings& s) {
+void AppController::SettingsChanged(const AppSettings& incoming) {
+    AppSettings s = incoming;
     {
         std::lock_guard lock(settingsMutex_);
+        s.window = settings_.window;   // the placement belongs to the window; the UI's copy may be stale
         settings_ = s;
     }
     fullscreen_ = s.video.fullscreen;
     saver_.Request(s);
     if (hooks_.settingsApplied) hooks_.settingsApplied(s);
 }
+
+void AppController::SaveWindowPlacement(const WindowSettings& placement) {
+    AppSettings s;
+    {
+        std::lock_guard lock(settingsMutex_);
+        if (SamePlacement(settings_.window, placement)) return;
+        settings_.window = placement;
+        s = settings_;
+    }
+    saver_.Request(s);
+}
+
+void AppController::OnLanguageChanged() { PublishConsoles(); }
 
 void AppController::ToggleFullscreen() {
     AppSettings s = Settings();
@@ -163,7 +208,7 @@ void AppController::StartSignIn() {
         ui::SignInModel shown;
         shown.userCode = code.userCode;
         shown.verificationUri = code.verificationUri;
-        shown.status = "Esperando você confirmar no outro aparelho";
+        shown.status = i18n::Tr("app.signin.waiting");
         shown.busy = true;
         ui_.SetSignIn(shown);
 
@@ -222,7 +267,7 @@ void AppController::GoToSignIn(const std::string& message) {
         if (wakeToken_) wakeToken_->Cancel();
     }
     if (controller_) controller_->cancel();
-    streaming_ = false;
+    showStreamPending_ = false;
     {
         std::lock_guard lock(apiMutex_);
         api_.reset();
@@ -239,6 +284,7 @@ void AppController::GoToSignIn(const std::string& message) {
     m.status = message;
     ui_.SetSignIn(m);
     ui_.ShowScreen(ui::Screen::SignIn);
+    streaming_ = false;   // after ShowScreen, so the render loop can keep the last video frame through the transition
 }
 
 void AppController::SignOut() {
@@ -249,7 +295,7 @@ void AppController::SignOut() {
 bool AppController::HandleExpiredLogin(const std::exception& e) {
     if (account_->signedIn()) return false;
     FLUVI_WARN("app", "saved login is gone: {}", e.what());
-    GoToSignIn("Sua sessão venceu. Entre de novo.");
+    GoToSignIn(i18n::Tr("app.signin.sessionExpired"));
     return true;
 }
 
@@ -276,7 +322,7 @@ void AppController::PublishConsoles() {
         ctx.error = consolesError_;
         ctx.refreshing = refreshing_;
     }
-    ctx.accountName = kAccountChip;
+    ctx.accountName = AccountChip();
     ui_.SetConsoles(MapConsoles(list, ctx));
 }
 
@@ -295,8 +341,7 @@ void AppController::RefreshConsoles() {
             list = EnsureApi()->consoles();
         } catch (const std::exception& e) {
             if (HandleExpiredLogin(e)) return;
-            error = DescribeError(e);
-            FLUVI_WARN("app", "consoles: {}", e.what());
+            error = DescribeError(e);   // logs the raw detail
         }
         {
             std::lock_guard lock(consolesMutex_);
@@ -328,15 +373,15 @@ void AppController::Wake(const std::string& id) {
         std::string error;
         try {
             EnsureApi()->wake(id);
-            for (int i = 0; i < 30 && !token->Cancelled(); ++i) {
-                if (!token->Sleep(3s)) return;
+            for (int i = 0; i < kWakePolls && !token->Cancelled(); ++i) {
+                if (!token->Sleep(std::chrono::seconds(kWakePollSeconds))) return;
                 const auto list = EnsureApi()->consoles();
                 bool on = false;
                 for (const auto& c : list) if (c.serverId == id && MapPower(c.powerState) == ui::PowerState::On) on = true;
                 { std::lock_guard lock(consolesMutex_); consoles_ = list; }
                 if (on) break;
                 PublishConsoles();
-                if (i == 29) error = "O console não ligou em 90 segundos. Confira a energia e a rede dele.";
+                if (i == kWakePolls - 1) error = WakeTimeoutText();
             }
         } catch (const std::exception& e) {
             if (HandleExpiredLogin(e)) return;
@@ -354,20 +399,73 @@ void AppController::Wake(const std::string& id) {
 
 // ---- connecting / streaming ---------------------------------------------------------------------------------------
 
-void AppController::Connect(const std::string& id) {
-    {
-        std::lock_guard lock(connectMutex_);
-        connectingName_.clear();
-    }
+void AppController::SetConnectingName(const std::string& id) {
+    std::string name;
     {
         std::lock_guard lock(consolesMutex_);
-        for (const auto& c : consoles_) {
-            if (c.serverId != id) continue;
-            const ui::ConsoleItem item = MapConsoles({c}, {}).consoles.front();
-            std::lock_guard nameLock(connectMutex_);
-            connectingName_ = item.name;
-        }
+        for (const auto& c : consoles_)
+            if (c.serverId == id) name = MapConsoles({c}, {}).consoles.front().name;
     }
+    std::lock_guard lock(connectMutex_);
+    connectingName_ = std::move(name);
+}
+
+// "Ligar e jogar": wake the console, show Connecting for it, poll until it reports On, then connect. Already on: connect.
+void AppController::WakeAndConnect(const std::string& id) {
+    bool alreadyOn = false;
+    {
+        std::lock_guard lock(consolesMutex_);
+        if (!busyId_.empty()) return;   // a wake from the list is running
+        for (const auto& c : consoles_)
+            if (c.serverId == id && MapPower(c.powerState) == ui::PowerState::On) alreadyOn = true;
+    }
+    if (alreadyOn) {
+        Connect(id);
+        return;
+    }
+    auto token = std::make_shared<CancelToken>();
+    {
+        std::lock_guard lock(tokenMutex_);
+        if (wakeToken_) wakeToken_->Cancel();
+        wakeToken_ = token;
+    }
+    SetConnectingName(id);
+    ui::ConnectingModel m;
+    { std::lock_guard lock(connectMutex_); m.consoleName = connectingName_; }
+    m.stage = ui::ConnectStage::Provisioning;
+    ui_.SetConnecting(m);
+    ui_.ShowScreen(ui::Screen::Connecting);
+    tasks_.Run([this, id, token, m]() mutable {
+        std::string error;
+        bool on = false;
+        try {
+            EnsureApi()->wake(id);
+            for (int i = 0; i < kWakePolls && !on; ++i) {
+                if (!token->Sleep(std::chrono::seconds(kWakePollSeconds))) return;
+                const auto list = EnsureApi()->consoles();
+                for (const auto& c : list)
+                    if (c.serverId == id && MapPower(c.powerState) == ui::PowerState::On) on = true;
+                std::lock_guard lock(consolesMutex_);
+                consoles_ = list;
+            }
+            if (!on) error = WakeTimeoutText();
+        } catch (const std::exception& e) {
+            if (HandleExpiredLogin(e)) return;
+            error = DescribeError(e);
+        }
+        if (token->Cancelled()) return;
+        if (!on) {
+            m.stage = ui::ConnectStage::Failed;
+            m.detail = error;
+            ui_.SetConnecting(m);   // the screen offers retry / back
+            return;
+        }
+        Connect(id);
+    });
+}
+
+void AppController::Connect(const std::string& id) {
+    SetConnectingName(id);
     ui::ConnectingModel m;
     { std::lock_guard lock(connectMutex_); m.consoleName = connectingName_; }
     m.stage = ui::ConnectStage::Provisioning;
@@ -382,11 +480,24 @@ void AppController::OnStage(StreamStage stage) {
     m.stage = MapStage(stage);
     ui_.SetConnecting(m);
     if (stage == StreamStage::Connected) {
+        // The render loop starts drawing video under the Connecting screen; the stream screen follows once a frame
+        // was really presented (OnFirstFramePresented), so no black or half-decoded frame is ever visible.
         streaming_ = true;
-        ui_.SetOverlayVisible(false);
-        ui_.ShowScreen(ui::Screen::Stream);
-        if (hooks_.streamStarted) hooks_.streamStarted();
+        showStreamPending_ = true;
     }
+}
+
+void AppController::OnFirstFramePresented() {
+    if (!showStreamPending_.exchange(false) || !streaming_.load()) return;
+    ui_.SetOverlayVisible(false);
+    ui_.ShowScreen(ui::Screen::Stream);
+    if (hooks_.streamStarted) hooks_.streamStarted();
+}
+
+void AppController::ReportNoVideo() {
+    if (!showStreamPending_.load()) return;
+    FLUVI_WARN("app", "no video frame after the stream connected");
+    OnStreamFailed(i18n::Tr("app.err.noVideo"));
 }
 
 void AppController::OnStreamFailed(const std::string& reason) {
@@ -394,10 +505,12 @@ void AppController::OnStreamFailed(const std::string& reason) {
     { std::lock_guard lock(connectMutex_); m.consoleName = connectingName_; }
     m.stage = ui::ConnectStage::Failed;
     m.detail = reason;
-    const bool wasStreaming = streaming_.exchange(false);
+    showStreamPending_ = false;
+    const bool wasStreaming = streaming_.load();
     ui_.SetConnecting(m);   // the screen stays up until the user backs out (Esc -> CancelConnect)
     if (wasStreaming) {
         ui_.ShowScreen(ui::Screen::Connecting);
+        streaming_ = false;   // after ShowScreen: the render loop keeps the last frame while the screen changes
         if (hooks_.streamStopped) hooks_.streamStopped();
     }
 }
@@ -406,23 +519,30 @@ void AppController::OnStreamEnded(const std::string& reason) {
     // HOOK(reconnect): xhome::reconnectableDisconnect(reason) + ReconnectBudget (DisconnectPolicy.h) decide whether
     // a retry could go here; for now every end goes back to the consoles list with the reason.
     FLUVI_INFO("app", "stream ended: {}", reason);
-    streaming_ = false;
-    if (hooks_.streamStopped) hooks_.streamStopped();
+    showStreamPending_ = false;
     {
         std::lock_guard lock(consolesMutex_);
         consolesError_ = DescribeEnded(reason);
     }
     ui_.SetOverlayVisible(false);
     ui_.ShowScreen(ui::Screen::Consoles);
+    streaming_ = false;   // after ShowScreen: the render loop keeps the last frame while the screen changes
+    if (hooks_.streamStopped) hooks_.streamStopped();
     PublishConsoles();
     RefreshConsoles();
 }
 
 void AppController::CancelConnect() {
     controller_->cancel();
-    const bool wasStreaming = streaming_.exchange(false);
-    if (wasStreaming && hooks_.streamStopped) hooks_.streamStopped();
+    {
+        std::lock_guard lock(tokenMutex_);
+        if (wakeToken_) wakeToken_->Cancel();   // a "Ligar e jogar" still waiting for the console
+    }
+    showStreamPending_ = false;
+    const bool wasStreaming = streaming_.load();
     ui_.ShowScreen(ui::Screen::Consoles);
+    streaming_ = false;   // after ShowScreen: the render loop keeps the last frame while the screen changes
+    if (wasStreaming && hooks_.streamStopped) hooks_.streamStopped();
     RefreshConsoles();
 }
 
@@ -439,7 +559,7 @@ void AppController::OnPad(const input::GamepadEvent& e) {
         padState_ = e.state;
     }
     const bool chord = (e.state.buttons & (BtnView | BtnMenu)) == (BtnView | BtnMenu);
-    const bool forward = streaming_.load() && !ui_.WantsInput() && !chord;
+    const bool forward = streaming_.load() && !showStreamPending_.load() && !ui_.WantsInput() && !chord;
     bool wasForwarding;
     {
         std::lock_guard lock(padMutex_);

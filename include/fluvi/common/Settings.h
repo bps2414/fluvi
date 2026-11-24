@@ -51,6 +51,25 @@ struct HotkeySettings {
     uint32_t toggleMode = 0x71;        // VK_F2  (Jogar <-> Liso)
     uint32_t toggleFullscreen = 0x7A;  // VK_F11
     uint32_t toggleDebug = 0x7B;       // VK_F12 (Dear ImGui panel)
+    uint32_t cycleHud = 0x72;          // VK_F3  (corner stats: off -> compact -> full)
+};
+
+// Always-on stats in a corner of the stream.
+enum class HudMode : uint8_t { Off, Compact, Full };
+enum class HudCorner : uint8_t { TopLeft, TopRight, BottomLeft, BottomRight };
+
+struct HudSettings {
+    HudMode mode = HudMode::Off;
+    HudCorner corner = HudCorner::TopLeft;
+};
+
+// Last windowed placement, restored on start. Physical pixels of the desktop (GetWindowPlacement's normal rect);
+// the app clamps it to a visible monitor's work area and to the minimum size before using it.
+struct WindowSettings {
+    bool hasPlacement = false;         // false on first run: default size, centered
+    int32_t x = 0, y = 0;
+    uint32_t width = 0, height = 0;
+    bool maximized = false;
 };
 
 struct AppSettings {
@@ -58,6 +77,9 @@ struct AppSettings {
     ControllerSettings controller;
     AudioSettings audio;
     HotkeySettings hotkeys;
+    HudSettings hud;
+    WindowSettings window;
+    std::string language = "auto";     // "auto" = Windows UI language; else a folder in assets/i18n ("pt-BR", "en-US")
 };
 
 } // namespace fluvi

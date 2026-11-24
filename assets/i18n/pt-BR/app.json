@@ -1,3 +1,47 @@
 {
-  "app.title": "Fluvi"
+  "app.splash.checking": "Verificando sua conta",
+  "app.account.chip": "Conta Microsoft",
+
+  "app.signin.waiting": "Esperando você confirmar no outro aparelho",
+  "app.signin.sessionExpired": "Sua sessão venceu. Entre de novo.",
+  "app.signin.codeExpired": "O código venceu. Toque em Entrar para pedir outro.",
+  "app.signin.declined": "O login foi recusado no outro aparelho.",
+  "app.signin.failed": "Não foi possível entrar. Tente de novo.",
+
+  "app.err.network": "Sem conexão com os servidores. Confira a internet e tente de novo.",
+  "app.err.denied": "O serviço recusou o acesso. Entre de novo.",
+  "app.err.notFound": "O serviço não encontrou isso. A sessão pode ter acabado.",
+  "app.err.tooMany": "Muitas tentativas seguidas. Espere um pouco e tente de novo.",
+  "app.err.server": "Os servidores estão com problema. Tente de novo em instantes.",
+  "app.err.service": "O serviço respondeu com erro. Tente de novo em instantes.",
+  "app.err.generic": "Algo deu errado. Tente de novo.",
+
+  "app.err.xbox.noProfile": "Esta conta Microsoft ainda não tem perfil Xbox. Entre uma vez em xbox.com com ela, crie o perfil e tente de novo.",
+  "app.err.xbox.region": "Xbox Live não está disponível no país ou região desta conta.",
+  "app.err.xbox.adult": "Esta conta precisa fazer a verificação de adulto em xbox.com antes de usar.",
+  "app.err.xbox.child": "É uma conta infantil: um responsável precisa permitir o uso no grupo Família da Microsoft.",
+
+  "app.err.consoleOff": "Ligue o console ou ative o modo Suspensão e o Remote Play nas configurações dele.",
+  "app.err.consoleBusy": "O console já está transmitindo para outro aparelho. Feche a outra sessão e tente de novo.",
+  "app.err.consoleTimeout": "O console demorou demais para responder. Tente de novo.",
+  "app.err.consoleRefused": "O console recusou a conexão. Tente de novo em alguns segundos.",
+  "app.err.consoleNotReady": "O console demorou demais para ficar pronto. Tente de novo.",
+  "app.err.wakeTimeout": "O console não ligou em {seconds} segundos. Confira a energia e a rede dele.",
+  "app.err.videoStart": "Não foi possível abrir a conexão de vídeo. Tente de novo.",
+  "app.err.streamSilent": "A conexão com o console abriu, mas a transmissão não começou. Tente de novo; se repetir, reinicie o console.",
+  "app.err.noVideo": "A conexão abriu, mas o vídeo não apareceu. Tente de novo; se repetir, reinicie o console.",
+
+  "app.ended.lost": "A conexão com o console caiu.",
+  "app.ended.shutdown": "O console foi desligado ou reiniciado.",
+  "app.ended.expired": "A sessão acabou no servidor.",
+  "app.ended.generic": "A transmissão terminou.",
+
+  "app.warn.fsr4Fallback": "FSR 4 indisponível, usando EASU",
+  "app.warn.smoothUnavailable": "Modo Liso indisponível. Detalhes no arquivo de log.",
+
+  "app.fatal.window": "Não foi possível abrir a janela: {error}",
+  "app.fatal.gpu": "Não foi possível iniciar a placa de vídeo (D3D12): {error}",
+  "app.fatal.swapChain": "Não foi possível criar a tela de apresentação: {error}",
+  "app.fatal.ui": "Não foi possível carregar a interface: {error}",
+  "app.fatal.deviceRemoved": "A placa de vídeo foi reiniciada pelo Windows. Abra o Fluvi de novo."
 }

@@ -1,216 +1,222 @@
 <rml>
 <!-- SPDX-License-Identifier: GPL-3.0-only -->
 <head>
-	<title>Stream</title>
+	<title>stream</title>
 	<link type="text/rcss" href="theme.rcss"/>
 	<style>
-		/* Layout only: values come from theme.rcss tokens. Transparent document over the live frame. */
+		/* Layout only: values come from theme.rcss tokens. A transparent document over the live frame. */
 		body { background-color: transparent; }
 
-		/* Always-on stats in the corner (opt-in): small, quiet, readable over any game. */
-		.corner
+		/* ---- Corner stats (HUD): readable over any game, numbers in fixed boxes so they never shake ---- */
+		.hud
 		{
 			position: absolute;
-			top: var(--s4); left: var(--s4);
-			display: flex;
-			flex-direction: row;
-			align-items: baseline;
-			gap: var(--s1h);
-			padding: var(--s1h) var(--s4) var(--s2) var(--s4);
-			border-radius: var(--r-pill);
+			box-sizing: border-box;
+			padding: var(--s2h) var(--s4);
+			border-radius: var(--r-row);
 			background-color: var(--bed-veil);
 			backdrop-filter: blur(var(--blur-sm));
+			border: 1dp var(--glass-line);
 			font-size: var(--t-xs);
 			color: var(--bank);
-			opacity: 0;
-			visibility: hidden;   /* hidden = not drawn at all (no blur pass under it) */
-			transition: opacity var(--d-base) cubic-out;
 		}
-		.corner.show { opacity: 1; visibility: visible; }
-		.corner .label-brand { margin-right: var(--s2); }
-		.corner .v { font-weight: 600; color: var(--foam); }
-		.corner .u { margin-right: var(--s2); }
+		.hud.tl { top: var(--s4); left: var(--s4); }
+		.hud.tr { top: var(--s4); right: var(--s4); }
+		.hud.bl { bottom: var(--s4); left: var(--s4); }
+		.hud.br { bottom: var(--s4); right: var(--s4); }
+		.hud .line { display: flex; flex-direction: row; align-items: center; gap: var(--s2); }
+		.hud .num { display: inline-block; width: 44dp; text-align: right; font-weight: 600; font-size: var(--t-sm); color: var(--foam); }
+		.hud .num.wide { width: 92dp; }
+		.hud .unit { margin-right: var(--s2); }
+		.hud .full { margin-top: var(--s2); width: 236dp; }
+		.hud .kv { display: flex; flex-direction: row; justify-content: space-between; padding: var(--s0) 0dp; }
+		.hud .kv .v { font-weight: 600; color: var(--foam); text-align: right; }
+		.hud .graph { margin-top: var(--s2); }
 
-		.scrim
+		.scrim-side
 		{
 			position: absolute; top: 0dp; left: 0dp; right: 0dp; bottom: 0dp;
-			decorator: linear-gradient(90deg, var(--scrim-clear) 40%, var(--scrim));
-			opacity: 0;
-			visibility: hidden;
-			transition: opacity var(--d-slow) cubic-out;
+			decorator: linear-gradient(90deg, var(--bed-clear) 35%, var(--scrim));
+			animation: var(--d-slow) fade-in cubic-out;
 		}
-		.scrim.open { opacity: 1; visibility: visible; }
 
-		/* The overlay: a pane of frosted river glass sliding in from the right edge. */
+		/* ---- The overlay: a pane of river glass on the right; the game stays visible on the left ---- */
 		.glass
 		{
 			position: absolute;
-			top: var(--s5); bottom: var(--s5);
-			right: var(--s5);
-			width: 540dp;
-			box-sizing: border-box;
-			padding: var(--s6);
+			top: var(--s4); bottom: var(--s4); right: var(--s4);
+			width: var(--panel);
 			border-radius: var(--r-panel);
 			background-color: var(--glass);
 			backdrop-filter: blur(var(--blur-lg));
-			border: 1.5dp var(--glass-line);
-			box-shadow: var(--shadow-panel);
-			opacity: 0;
-			visibility: hidden;   /* closed: not drawn (its blur and shadow showed through, flickering, in Liso) */
-			transform: translateX(48dp);
-			transition: opacity transform var(--d-slow) cubic-out;
-			display: flex;
-			flex-direction: column;
+			border: 1dp var(--glass-line);
+			/* No box-shadow: a shadow whose area runs past the screen edge is drawn 16 px lower with its box. */
+			animation: var(--d-slow) slide-in cubic-out;
 		}
-		.glass.open { opacity: 1; visibility: visible; transform: translateX(0dp); }
+		/* The column lives in an inner box that carries the padding: an absolutely placed flex box does not take its
+		   height from top/bottom, and a percentage height would count the panel's padding twice. */
+		.glass .column { height: 100%; box-sizing: border-box; padding: var(--s5) var(--s5) var(--s4) var(--s5); display: flex; flex-direction: column; }
+		@keyframes slide-in { from { opacity: 0; transform: translateX(40dp); } to { opacity: 1; transform: translateX(0dp); } }
 
-		.head { display: flex; flex-direction: row; align-items: center; justify-content: space-between; }
-		.head .brand-name { font-size: var(--t-lg); }
-		.head .brand-mark { width: 32dp; height: 32dp; border-radius: var(--r-row); }
-		.head .brand-mark .w { height: 3dp; }
-		.head .brand-mark .w1 { top: 9dp; left: 6dp; width: 16dp; }
-		.head .brand-mark .w2 { top: 15dp; left: 11dp; width: 15dp; }
-		.head .brand-mark .w3 { top: 21dp; left: 7dp; width: 10dp; }
-		.live .res { color: var(--bank); font-weight: normal; margin-left: var(--s1); }
+		.head .name { font-size: var(--t-xl); white-space: nowrap; overflow: hidden; }
+		.head .meta { margin-top: var(--s1); display: flex; flex-direction: row; align-items: center; gap: var(--s5); color: var(--bank); font-size: var(--t-xs); }
+		.head .meta .item { display: flex; flex-direction: row; align-items: center; gap: var(--s1h); }
+		.head .meta .icon { font-size: var(--i-sm); }
 
-		.segmented
-		{
-			margin-top: var(--s6);
-			display: flex; flex-direction: row;
-			padding: var(--s1);
-			border-radius: var(--r-pill);
-			background-color: var(--water);
-		}
-		.seg
-		{
-			flex: 1;
-			height: 50dp; line-height: 46dp;
-			box-sizing: border-box;
-			border-radius: var(--r-pill);
-			text-align: center;
-			font-weight: 600;
-			font-size: var(--t-sm);
-			color: var(--bank);
-			border: 2dp transparent;
-			transition: background-color color border-color var(--d-fast) cubic-out;
-		}
-		.seg:hover { color: var(--foam); }
-		.seg.on { background-color: var(--brand); color: var(--brand-ink); }
-		.seg:focus-visible { border-color: var(--brand); color: var(--foam); }
-		.seg.on:focus-visible { border-color: var(--brand-edge); color: var(--brand-ink); }
-		.mode-hint { margin-top: var(--s3); min-height: 40dp; font-size: var(--t-xs); line-height: 1.45; color: var(--silt); }
+		.scroll { flex: 1 1 0dp; overflow-y: auto; margin-top: var(--s4); padding-right: var(--s1); }
+		.segmented { margin-top: var(--s1); }
 
-		/* Latency is the number people open this panel for. */
-		.big { margin-top: var(--s5); height: var(--t-stat); display: flex; flex-direction: row; align-items: baseline; gap: var(--s2h); }
-		.big .num { font-size: var(--t-stat); letter-spacing: -2dp; line-height: 1; }
-		.big .unit { font-size: var(--t-lg); color: var(--bank); }
-		.big .skeleton-line { width: 200dp; height: var(--t-stat); margin: 0dp; border-radius: var(--r-row); }
-		.big-cap { margin-top: var(--s0); font-size: var(--t-xs); color: var(--silt); }
+		.verdict { margin-top: var(--s5); display: flex; flex-direction: row; align-items: baseline; gap: var(--s2h); }
+		.verdict .num { font-size: var(--t-3xl); }
+		.verdict .unit { font-size: var(--t-md); color: var(--bank); }
+		.verdict .word { margin-left: var(--s3); font-family: "Bricolage Grotesque"; font-weight: bold; font-size: var(--t-lg); }
+		.verdict .skeleton-line { width: 220dp; height: var(--t-3xl); margin: 0dp; }
+		.verdict-cap { font-size: var(--t-xs); color: var(--silt); }
+		.scroll .graph { margin-top: var(--s3); }
 
-		.fps { margin-top: var(--s5); display: flex; flex-direction: row; gap: var(--s1h); }
-		.fps .cell { flex: 1; padding: var(--s3) var(--s3h); border-radius: var(--r-row); background-color: var(--water); }
-		.fps .v { font-size: var(--t-lg); font-weight: bold; }
-		.fps .k { font-size: var(--t-xs); color: var(--silt); margin-top: var(--s0); }
-		.fps .cell.gen .v { color: var(--brand); }
-		.fps .skeleton-line { height: var(--t-lg); margin: 0dp; }
+		.fps { margin-top: var(--s4); display: flex; flex-direction: row; gap: var(--s1h); }
+		.fps .cell { flex: 1; padding: var(--s2h) var(--s3); border-radius: var(--r-row); background-color: var(--water); }
+		.fps .v { font-size: var(--t-md); font-weight: 600; }
+		.fps .k { font-size: var(--t-xs); color: var(--silt); }
+		.fps .cell.gen.live .v { color: var(--brand); }
+		.fps .skeleton-line { height: var(--t-md); margin: 0dp; }
 
-		.rows { margin-top: var(--s4); }
-		.kv
-		{
-			display: flex; flex-direction: row; justify-content: space-between;
-			padding: var(--s2) 0dp;
-			border-bottom: 1dp var(--divider);
-			font-size: var(--t-sm);
-		}
+		.details { margin-top: var(--s3); }
+		.kv { display: flex; flex-direction: row; justify-content: space-between; gap: var(--s4); padding: var(--s1h) 0dp; border-bottom: 1dp var(--line); font-size: var(--t-xs); }
 		.kv .k { color: var(--bank); }
-		.kv .v { font-weight: 600; }
+		.kv .v { font-weight: 600; text-align: right; }
 		.kv .v.good { color: var(--alive); }
-		.glass .notice { margin-top: var(--s4); font-size: var(--t-sm); }
+		.glass .notice { margin-top: var(--s3); font-size: var(--t-xs); }
 
-		.spacer { flex: 1; }
+		.quick { margin-top: var(--s4); }
+		.quick h3 { margin-bottom: var(--s2); }
+		.quick .row { min-height: var(--target); padding: var(--s1h) var(--s3) var(--s1h) var(--s4); }
+		.quick .control { width: 240dp; }
+		.quick .stepper { width: 240dp; }
 
-		.toggle
-		{
-			display: flex; flex-direction: row; align-items: center; justify-content: space-between;
-			padding: var(--s2h) var(--s3h);
-			border-radius: var(--r-row);
-			font-size: var(--t-sm);
-			color: var(--bank);
-			border: 2dp transparent;
-			transition: background-color border-color var(--d-fast) cubic-out;
-		}
-		.toggle:hover { background-color: var(--water); }
-		.toggle:focus-visible { border-color: var(--brand); background-color: var(--water); color: var(--foam); }
-
-		.foot { margin-top: var(--s4); display: flex; flex-direction: row; gap: var(--s3); }
-		.foot button { flex: 1; }
-		.hint { margin-top: var(--s4); display: flex; flex-direction: row; justify-content: center; gap: var(--s5); font-size: var(--t-xs); color: var(--silt); }
+		.foot { margin-top: var(--s3); display: flex; flex-direction: row; gap: var(--s2); }
+		.foot button { flex: 1; padding: 0dp var(--s3); }
+		.hint-line { margin-top: var(--s3); display: flex; flex-direction: row; justify-content: center; gap: var(--s5); font-size: var(--t-xs); color: var(--silt); }
+		.hint-line .hint { gap: var(--s1h); }
 	</style>
 </head>
 <body data-model="fluvi">
-	<div class="corner" data-class-show="stream.corner &amp;&amp; !stream.overlay">
-		<span class="label-brand">{{ stream.mode }}</span>
-		<span class="v">{{ stream.latency }}</span><span class="u">ms</span>
-		<span class="v">{{ stream.fps_present }}</span><span class="u">fps</span>
+	<!-- Corner stats -->
+	<div class="hud" data-if="stream.hud > 0 &amp;&amp; !stream.overlay"
+	     data-class-tl="stream.corner == 0" data-class-tr="stream.corner == 1" data-class-bl="stream.corner == 2" data-class-br="stream.corner == 3">
+		<div class="line">
+			<div class="led" data-class-alive="stream.band == 0" data-class-pale="stream.band == 1" data-class-caution="stream.band == 2" data-class-danger="stream.band == 3"></div>
+			<span class="num">{{ stream.latency }}</span><span class="unit">[stream.ms]</span>
+			<span class="num">{{ stream.fps_present }}</span><span class="unit">[stream.fps]</span>
+		</div>
+		<div class="full" data-if="stream.hud == 2">
+			<div class="kv"><span>[stream.hud_mode]</span><span class="v">{{ stream.mode }}</span></div>
+			<div class="kv"><span>[stream.hud_fps]</span><span class="v">{{ stream.fps_line }}</span></div>
+			<div class="kv"><span>[stream.bitrate]</span><span class="v">{{ stream.bitrate }}</span></div>
+			<div class="kv"><span>[stream.losses]</span><span class="v">{{ stream.loss_short }}</span></div>
+			<div class="graph small"><div class="bar" data-for="b : stream.graph" data-style-height="b + '%'" data-class-now="it_index == stream.graph.size - 1"></div></div>
+		</div>
 	</div>
 
-	<div class="scrim" data-class-open="stream.overlay"></div>
+	<div class="scrim-side" data-if="stream.overlay"></div>
 
-	<div class="glass" data-class-open="stream.overlay">
+	<div class="glass" data-if="stream.overlay"><div class="column">
 		<div class="head">
-			<div class="brand">
-				<div class="brand-mark"><div class="w w1"></div><div class="w w2"></div><div class="w w3"></div></div>
-				<div class="brand-name">Fluvi</div>
+			<div class="name display">{{ stream.console }}</div>
+			<div class="meta">
+				<div class="live item"><div class="led"></div><span>[stream.live]</span></div>
+				<div class="item"><span class="icon">&#xE492;</span><span>{{ stream.session }}</span></div>
+				<div class="item"><span class="icon">&#xE32E;</span><span>{{ stream.res_out }}</span></div>
 			</div>
-			<div class="live"><div class="led"></div><span>Ao vivo</span><span class="res">{{ stream.res_out }}</span></div>
 		</div>
 
-		<div class="segmented">
-			<div class="seg" autofocus="" id="mode-play" data-class-on="!stream.smooth" data-event-click="set_mode(0)">Jogar</div>
-			<div class="seg" id="mode-smooth" data-class-on="stream.smooth" data-event-click="set_mode(1)">Liso</div>
-		</div>
-		<div class="mode-hint">{{ stream.mode_hint }}</div>
+		<div class="scroll">
+			<div class="segmented">
+				<div class="seg" autofocus="" id="mode-play" data-class-on="!stream.smooth" data-event-click="set_mode(0)">
+					<div class="what"><span class="icon">&#xE2DE;</span><span>[stream.mode_play]</span></div>
+					<div class="desc">[stream.mode_play_d]</div>
+				</div>
+				<div class="seg" id="mode-smooth" data-class-on="stream.smooth" data-event-click="set_mode(1)">
+					<div class="what"><span class="icon">&#xE6DE;</span><span>[stream.mode_smooth]</span></div>
+					<div class="desc">{{ stream.smooth_desc }}</div>
+				</div>
+			</div>
 
-		<div class="big">
-			<div class="num display" data-if="stream.has_stats">{{ stream.latency }}</div>
-			<div class="skeleton-line" data-if="!stream.has_stats"></div>
-			<div class="unit">ms</div>
-		</div>
-		<div class="big-cap">de latência no cliente, ida e volta da rede em {{ stream.rtt }}</div>
+			<div class="verdict">
+				<span class="num condensed" data-if="stream.has_stats">{{ stream.latency }}</span>
+				<div class="skeleton-line" data-if="!stream.has_stats"></div>
+				<span class="unit">[stream.ms]</span>
+				<span class="word" data-if="stream.has_stats" data-class-band-0="stream.band == 0" data-class-band-1="stream.band == 1" data-class-band-2="stream.band == 2" data-class-band-3="stream.band == 3">{{ stream.band_word }}</span>
+			</div>
+			<div class="verdict-cap">{{ stream.latency_cap }}</div>
+			<div class="graph"><div class="bar" data-for="b : stream.graph" data-style-height="b + '%'" data-class-now="it_index == stream.graph.size - 1"></div></div>
 
-		<div class="fps">
-			<div class="cell"><div class="v" data-if="stream.has_stats">{{ stream.fps_game }}</div><div class="skeleton-line" data-if="!stream.has_stats"></div><div class="k">do jogo</div></div>
-			<div class="cell"><div class="v" data-if="stream.has_stats">{{ stream.fps_stream }}</div><div class="skeleton-line" data-if="!stream.has_stats"></div><div class="k">recebidos</div></div>
-			<div class="cell gen"><div class="v" data-if="stream.has_stats">{{ stream.fps_gen }}</div><div class="skeleton-line" data-if="!stream.has_stats"></div><div class="k">gerados</div></div>
-			<div class="cell"><div class="v" data-if="stream.has_stats">{{ stream.fps_present }}</div><div class="skeleton-line" data-if="!stream.has_stats"></div><div class="k">na tela</div></div>
-		</div>
+			<div class="fps">
+				<div class="cell"><div class="v" data-if="stream.has_stats">{{ stream.fps_game }}</div><div class="skeleton-line" data-if="!stream.has_stats"></div><div class="k">[stream.fps_game]</div></div>
+				<div class="cell"><div class="v" data-if="stream.has_stats">{{ stream.fps_stream }}</div><div class="skeleton-line" data-if="!stream.has_stats"></div><div class="k">[stream.fps_received]</div></div>
+				<div class="cell gen" data-class-live="stream.smooth"><div class="v" data-if="stream.has_stats">{{ stream.fps_gen }}</div><div class="skeleton-line" data-if="!stream.has_stats"></div><div class="k">[stream.fps_generated]</div></div>
+				<div class="cell"><div class="v" data-if="stream.has_stats">{{ stream.fps_present }}</div><div class="skeleton-line" data-if="!stream.has_stats"></div><div class="k">[stream.fps_screen]</div></div>
+			</div>
 
-		<div class="rows">
-			<div class="kv"><span class="k">Resolução do stream</span><span class="v">{{ stream.res }}</span></div>
-			<div class="kv"><span class="k">Bitrate</span><span class="v">{{ stream.bitrate }}</span></div>
-			<div class="kv"><span class="k">Apresentação</span><span class="v" data-class-good="stream.flip">{{ stream.present }}</span></div>
-			<div class="kv"><span class="k">VRR</span><span class="v" data-class-good="stream.vrr_on">{{ stream.vrr }}</span></div>
-			<div class="kv"><span class="k">Monitor</span><span class="v">{{ stream.refresh }}</span></div>
-			<div class="kv"><span class="k">Decodificação / GPU</span><span class="v">{{ stream.timing }}</span></div>
-			<div class="kv"><span class="k">Perdas</span><span class="v">{{ stream.loss }}</span></div>
-		</div>
+			<div class="notice" data-if="stream.warning != ''"><span class="icon">&#xE4E2;</span><span>{{ stream.warning }}</span></div>
 
-		<div class="notice" data-if="stream.warning != ''">{{ stream.warning }}</div>
+			<div class="details">
+				<div class="section-head" id="details-head" data-class-open="stream.details" data-event-click="toggle_details"><span>[stream.details]</span><span class="icon">&#xE136;</span></div>
+				<div class="section-body" data-if="stream.details">
+					<div class="kv"><span class="k">[stream.res_stream]</span><span class="v">{{ stream.res }}</span></div>
+					<div class="kv"><span class="k">[stream.bitrate]</span><span class="v">{{ stream.bitrate }}</span></div>
+					<div class="kv"><span class="k">[stream.present]</span><span class="v" data-class-good="stream.flip">{{ stream.present }}</span></div>
+					<div class="kv"><span class="k">[stream.vrr]</span><span class="v" data-class-good="stream.vrr_on">{{ stream.vrr }}</span></div>
+					<div class="kv"><span class="k">[stream.monitor]</span><span class="v">{{ stream.refresh }}</span></div>
+					<div class="kv"><span class="k">[stream.timing]</span><span class="v">{{ stream.timing }}</span></div>
+					<div class="kv"><span class="k">[stream.losses]</span><span class="v">{{ stream.loss }}</span></div>
+				</div>
+			</div>
 
-		<div class="spacer"></div>
-
-		<div class="toggle" id="toggle-corner" data-event-click="toggle_corner">
-			<span>Mostrar latência e fps no canto</span>
-			<div class="switch" data-class-on="stream.corner"><div class="knob"></div></div>
+			<div class="quick">
+				<div class="row" id="quick-hud" data-setting="hud">
+					<div class="label"><div class="t">[stream.quick_hud]</div></div>
+					<div class="control"><div class="stepper"><div class="arrow" data-dir="-1">&#xE138;</div><div class="value">{{ set.hud }}</div><div class="arrow" data-dir="1">&#xE13A;</div></div></div>
+				</div>
+				<div class="row" id="quick-corner" data-setting="corner">
+					<div class="label"><div class="t">[stream.quick_corner]</div></div>
+					<div class="control"><div class="stepper"><div class="arrow" data-dir="-1">&#xE138;</div><div class="value">{{ set.corner }}</div><div class="arrow" data-dir="1">&#xE13A;</div></div></div>
+				</div>
+				<div class="row" id="quick-volume" data-setting="volume">
+					<div class="label"><div class="t">[stream.quick_volume]</div></div>
+					<div class="control"><div class="stepper"><div class="arrow" data-dir="-1">&#xE138;</div><div class="value">{{ set.volume }}</div><div class="arrow" data-dir="1">&#xE13A;</div></div></div>
+				</div>
+				<div class="row" id="quick-fullscreen" data-setting="fullscreen">
+					<div class="label"><div class="t">[stream.quick_fullscreen]</div></div>
+					<div class="control"><div class="switch" data-class-on="set.fullscreen_on"><div class="knob"></div></div></div>
+				</div>
+			</div>
 		</div>
 
 		<div class="foot">
-			<button id="stream-settings" data-event-click="open_settings">Configurações</button>
-			<button class="danger" id="stream-disconnect" data-event-click="disconnect">Desconectar</button>
+			<button id="stream-settings" data-event-click="open_settings"><span class="icon">&#xE272;</span><span>[common.settings]</span></button>
+			<button class="danger" id="stream-disconnect" data-event-click="disconnect"><span class="icon">&#xE2E4;</span><span>[stream.disconnect]</span></button>
+			<button class="ghost" id="stream-quit" data-event-click="quit"><span class="icon">&#xE3DA;</span><span>[stream.quit_short]</span></button>
 		</div>
-		<div class="hint">
-			<span><span class="keycap">{{ stream.hk_overlay }}</span>ou<span class="keycap">View + Menu</span>fecha o painel</span>
-			<span><span class="keycap">{{ stream.hk_mode }}</span>troca o modo</span>
+		<div class="hint-line">
+			<span class="hint"><span class="keycap kb">{{ stream.hk_overlay }}</span><span class="keycap gp">[settings.pad_view]</span><span class="keycap gp">[settings.pad_menu]</span><span>[stream.hint_close]</span></span>
+			<span class="hint"><span class="keycap">{{ stream.hk_mode }}</span><span>[stream.hint_mode]</span></span>
+			<span class="hint"><span class="keycap">{{ stream.hk_hud }}</span><span>[stream.hint_hud]</span></span>
+		</div>
+	</div></div>
+
+	<div class="veil" id="veil"></div>
+
+	<div class="toast-slot" data-class-on="ui.toast_on"><div class="toast"><span class="icon">&#xE182;</span><span>{{ ui.toast }}</span></div></div>
+
+	<div class="scrim" data-if="ui.confirm_quit">
+		<div class="dialog">
+			<h2>[common.quit_title]</h2>
+			<div class="lead">[common.quit_body]</div>
+			<div class="dialog-actions">
+				<button id="dlg-stay" data-event-click="cancel_quit"><span>[common.quit_stay]</span></button>
+				<button class="danger" id="dlg-quit" data-event-click="confirm_quit"><span class="icon">&#xE3DA;</span><span>[common.quit_confirm]</span></button>
+			</div>
 		</div>
 	</div>
 </body>

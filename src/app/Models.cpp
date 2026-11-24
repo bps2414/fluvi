@@ -3,21 +3,17 @@
 
 #include <algorithm>
 #include <cctype>
-#include <format>
 
-#include <windows.h>
+#include <nlohmann/json.hpp>
+
+#include "fluvi/common/I18n.h"
+#include "fluvi/core/Log.h"
 
 namespace fluvi::app {
 
-namespace {
+using json = nlohmann::json;
 
-std::string ToUtf8(const std::wstring& w) {
-    if (w.empty()) return {};
-    const int n = WideCharToMultiByte(CP_UTF8, 0, w.data(), static_cast<int>(w.size()), nullptr, 0, nullptr, nullptr);
-    std::string s(static_cast<size_t>(std::max(n, 0)), '\0');
-    if (n > 0) WideCharToMultiByte(CP_UTF8, 0, w.data(), static_cast<int>(w.size()), s.data(), n, nullptr, nullptr);
-    return s;
-}
+namespace {
 
 bool Lower(std::string_view a, std::string_view b) {
     return a.size() == b.size() && std::equal(a.begin(), a.end(), b.begin(), [](char x, char y) { return std::tolower(static_cast<unsigned char>(x)) == std::tolower(static_cast<unsigned char>(y)); });
@@ -74,51 +70,61 @@ ui::ConnectStage MapStage(StreamStage stage) {
     return ui::ConnectStage::Provisioning;
 }
 
+// Every sentence below is a translated key. The raw server text (status, codes, messages) goes to the log only.
 std::string DescribeError(const std::exception& error) {
-    if (dynamic_cast<const xhome::NetworkError*>(&error))
-        return "Sem conexão com os servidores. Confira a internet e tente de novo.";
+    FLUVI_WARN("app", "error detail: {}", error.what());
+    using i18n::Tr;
+    if (dynamic_cast<const xhome::NetworkError*>(&error)) return Tr("app.err.network");
     if (const auto* service = dynamic_cast<const xhome::ServiceError*>(&error)) {
-        const std::string xbox = ToUtf8(xhome::describeXboxError(service->body));
-        if (!xbox.empty()) return xbox;
+        // Xbox account problems come as an "XErr" code in the body.
+        const json body = json::parse(service->body, nullptr, /*allow_exceptions=*/false);
+        const auto xe = body.is_object() ? body.find("XErr") : body.end();
+        const uint64_t xerr = body.is_object() && xe != body.end() && xe->is_number_unsigned() ? xe->get<uint64_t>() : 0;
+        switch (xerr) {
+        case 2148916233: return Tr("app.err.xbox.noProfile");
+        case 2148916235: return Tr("app.err.xbox.region");
+        case 2148916236: case 2148916237: return Tr("app.err.xbox.adult");
+        case 2148916238: return Tr("app.err.xbox.child");
+        default: break;
+        }
         const int status = service->status;
-        if (status == 401 || status == 403) return std::format("O serviço recusou o acesso (HTTP {}). Entre de novo.", status);
-        if (status == 404) return "O serviço não encontrou isso (HTTP 404). A sessão pode ter acabado.";
-        if (status == 429) return "Muitas tentativas seguidas (HTTP 429). Espere um pouco e tente de novo.";
-        if (status >= 500) return std::format("Os servidores estão com problema (HTTP {}). Tente de novo em instantes.", status);
-        return std::format("O serviço respondeu com erro (HTTP {}).", status);
+        if (status == 401 || status == 403) return Tr("app.err.denied");
+        if (status == 404) return Tr("app.err.notFound");
+        if (status == 429) return Tr("app.err.tooMany");
+        if (status >= 500) return Tr("app.err.server");
+        return Tr("app.err.service");
     }
-    return std::format("Algo deu errado: {}", error.what());
+    return Tr("app.err.generic");
 }
 
-// Known failures get plain text; the raw server code and message go to the log (StreamController), not the screen.
+// Known failures get a sentence with the action to take; unknown ones a generic one (the code stays in the log).
 std::string DescribeSessionFailure(const std::string& errorCode, const std::string& errorMessage) {
+    FLUVI_WARN("app", "session failure detail: {} {}", errorCode, errorMessage);
+    using i18n::Tr;
     const auto has = [&](const char* s) { return errorCode.find(s) != std::string::npos || errorMessage.find(s) != std::string::npos; };
     // The console is not registered with the push service: off (energy saving), still booting, or remote features off.
-    if (has("WNSError") || has("WaitingForServerToRegister") || has("ErrorCallingWNS"))
-        return "O console não respondeu. Se ele estava desligado ou acabou de ligar, espere um minuto e tente de novo. "
-               "No console, deixe o modo de energia em \"Suspensão\" e ative \"Habilitar recursos remotos\".";
-    if (has("Busy") || has("AlreadyInSession") || has("InUse"))
-        return "O console já está transmitindo para outro aparelho. Feche a outra sessão e tente de novo.";
-    if (has("Timeout") || has("TimedOut"))
-        return "O console demorou demais para responder. Tente de novo.";
-    std::string s = "O console recusou a sessão";
-    if (!errorCode.empty()) s += std::format(" (código {})", errorCode);
-    return s + ". Tente de novo em alguns segundos.";
+    if (has("WNSError") || has("WaitingForServerToRegister") || has("ErrorCallingWNS")) return Tr("app.err.consoleOff");
+    if (has("Busy") || has("AlreadyInSession") || has("InUse")) return Tr("app.err.consoleBusy");
+    if (has("Timeout") || has("TimedOut")) return Tr("app.err.consoleTimeout");
+    return Tr("app.err.consoleRefused");
 }
 
 std::string DescribeEnded(const std::string& reason) {
-    if (reason == "connection lost") return "A conexão com o console caiu.";
-    if (reason == "KickForServerShutdown") return "O console foi desligado ou reiniciado.";
-    if (reason == "session expired") return "A sessão acabou no servidor.";
-    if (reason.empty()) return "A transmissão terminou.";
-    return std::format("A transmissão terminou ({}).", reason);
+    using i18n::Tr;
+    if (reason == "connection lost") return Tr("app.ended.lost");
+    if (reason == "KickForServerShutdown") return Tr("app.ended.shutdown");
+    if (reason == "session expired") return Tr("app.ended.expired");
+    return Tr("app.ended.generic");
 }
 
 std::string DescribeSignInFailure(xhome::SignInPoll result, const std::string& detail) {
+    using i18n::Tr;
     switch (result) {
-    case xhome::SignInPoll::Expired: return "O código venceu. Toque em Entrar para pedir outro.";
-    case xhome::SignInPoll::Declined: return "O login foi recusado no outro aparelho.";
-    case xhome::SignInPoll::Failed: return detail.empty() ? "Não foi possível entrar." : std::format("Não foi possível entrar: {}", detail);
+    case xhome::SignInPoll::Expired: return Tr("app.signin.codeExpired");
+    case xhome::SignInPoll::Declined: return Tr("app.signin.declined");
+    case xhome::SignInPoll::Failed:
+        if (!detail.empty()) FLUVI_WARN("app", "sign-in failure detail: {}", detail);
+        return Tr("app.signin.failed");
     default: return {};
     }
 }

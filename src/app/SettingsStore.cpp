@@ -2,6 +2,7 @@
 #include "SettingsStore.h"
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -54,6 +55,8 @@ constexpr Names<StreamResolution, 3> kResolution{{"720p", "1080p", "1440p"}};
 constexpr Names<StreamMode, 2> kMode{{"play", "smooth"}};
 constexpr Names<QualityPreset, 3> kPreset{{"light", "standard", "max"}};
 constexpr Names<UpscalerChoice, 3> kUpscaler{{"auto", "easu", "fsr4"}};
+constexpr Names<HudMode, 3> kHudMode{{"off", "compact", "full"}};
+constexpr Names<HudCorner, 4> kHudCorner{{"topLeft", "topRight", "bottomLeft", "bottomRight"}};
 
 // Readers: take the value only when it has the right JSON type, else leave `out` (the default) alone.
 const json* Section(const json& root, const char* name) {
@@ -74,6 +77,17 @@ void ReadUint(const json& o, const char* key, uint32_t& out, uint32_t lo, uint32
         const int64_t v = it->get<int64_t>();
         if (v >= lo && v <= hi) out = static_cast<uint32_t>(v);
     }
+}
+void ReadInt(const json& o, const char* key, int32_t& out, int32_t lo, int32_t hi) {
+    if (const auto it = o.find(key); it != o.end() && it->is_number_integer()) {
+        const int64_t v = it->get<int64_t>();
+        if (v >= lo && v <= hi) out = static_cast<int32_t>(v);
+    }
+}
+// A language folder name ("pt-BR") or "auto": short, letters/digits/hyphen only (it becomes a path).
+bool ValidLanguage(const std::string& s) {
+    if (s.empty() || s.size() > 16) return false;
+    return std::all_of(s.begin(), s.end(), [](unsigned char c) { return std::isalnum(c) || c == '-'; });
 }
 template <class E, size_t N>
 void ReadEnum(const json& o, const char* key, const Names<E, N>& names, E& out) {
@@ -129,7 +143,34 @@ AppSettings ParseSettings(std::string_view text, bool* valid) {
         ReadUint(*h, "toggleMode", s.hotkeys.toggleMode, 1, 254);
         ReadUint(*h, "toggleFullscreen", s.hotkeys.toggleFullscreen, 1, 254);
         ReadUint(*h, "toggleDebug", s.hotkeys.toggleDebug, 1, 254);
+        ReadUint(*h, "cycleHud", s.hotkeys.cycleHud, 1, 254);
     }
+    if (const json* h = Section(root, "hud")) {
+        ReadEnum(*h, "mode", kHudMode, s.hud.mode);
+        ReadEnum(*h, "corner", kHudCorner, s.hud.corner);
+    }
+    if (const json* w = Section(root, "window")) {
+        // A placement needs a usable size; anything else means "no placement" (default size, centered).
+        WindowSettings ws;
+        uint32_t width = 0, height = 0;
+        int32_t x = 0, y = 0;
+        const bool hasPos = w->contains("x") && w->contains("y");
+        ReadInt(*w, "x", x, -100000, 100000);
+        ReadInt(*w, "y", y, -100000, 100000);
+        ReadUint(*w, "width", width, 200, 20000);
+        ReadUint(*w, "height", height, 200, 20000);
+        if (hasPos && width && height) {
+            ws.hasPlacement = true;
+            ws.x = x;
+            ws.y = y;
+            ws.width = width;
+            ws.height = height;
+            Read(*w, "maximized", ws.maximized);
+            s.window = ws;
+        }
+    }
+    if (const auto it = root.find("language"); it != root.end() && it->is_string() && ValidLanguage(it->get<std::string>()))
+        s.language = it->get<std::string>();
     return s;
 }
 
@@ -169,6 +210,24 @@ std::string SerializeSettings(const AppSettings& s, std::string_view previous) {
     h["toggleMode"] = s.hotkeys.toggleMode;
     h["toggleFullscreen"] = s.hotkeys.toggleFullscreen;
     h["toggleDebug"] = s.hotkeys.toggleDebug;
+    h["cycleHud"] = s.hotkeys.cycleHud;
+
+    json& hud = section("hud");
+    hud["mode"] = kHudMode.Name(s.hud.mode);
+    hud["corner"] = kHudCorner.Name(s.hud.corner);
+
+    if (s.window.hasPlacement) {
+        json& w = section("window");
+        w["x"] = s.window.x;
+        w["y"] = s.window.y;
+        w["width"] = s.window.width;
+        w["height"] = s.window.height;
+        w["maximized"] = s.window.maximized;
+    } else {
+        root.erase("window");
+    }
+
+    root["language"] = s.language;
 
     return root.dump(2, ' ', false, json::error_handler_t::replace) + "\n";
 }

@@ -67,6 +67,14 @@ struct Fixture {
             ctx->Wait(ctx->Submit());
         }
     }
+    // Real-time screen changes: the splash holds for 900 ms, crossfades take 180 ms.
+    void Settle() {
+        for (int i = 0; i < 400 && ui->InTransition(); ++i) {
+            Sleep(5);
+            Frames(1);
+        }
+        CHECK_FALSE(ui->InTransition());
+    }
     void Key(WPARAM vk) {
         CHECK(ui->HandleMessage(nullptr, WM_KEYDOWN, vk, 0));
         ui->HandleMessage(nullptr, WM_KEYUP, vk, LPARAM(0xC0000000));
@@ -93,7 +101,7 @@ TEST_CASE("every screen renders and the device survives") {
     f.ui->SetStats(stats);
     f.ui->SetSettings(AppSettings{});
 
-    for (auto s : {ui::Screen::SignIn, ui::Screen::Consoles, ui::Screen::Connecting, ui::Screen::Stream, ui::Screen::Settings}) {
+    for (auto s : {ui::Screen::Splash, ui::Screen::SignIn, ui::Screen::Consoles, ui::Screen::Connecting, ui::Screen::Stream, ui::Screen::Settings}) {
         f.ui->ShowScreen(s);
         f.ui->SetOverlayVisible(s == ui::Screen::Stream);
         f.Frames(8);
@@ -126,7 +134,10 @@ TEST_CASE("Right on the focused settings row steps the value and reports it") {
     f.Key(VK_LEFT);
     f.Frames(2);
     CHECK(changed->video.resolution == StreamResolution::R1080p);
-    f.Key(VK_ESCAPE);
+    f.Key(VK_ESCAPE);   // from a row back to its section in the nav
+    f.Frames(1);
+    CHECK(f.ui->CurrentScreen() == ui::Screen::Settings);
+    f.Key(VK_ESCAPE);   // from the nav out of settings
     f.Frames(1);
     CHECK(f.ui->CurrentScreen() == ui::Screen::SignIn);   // back to where settings was opened from
 }
@@ -135,7 +146,9 @@ TEST_CASE("stream hotkeys toggle the overlay and the mode; input goes to the gam
     Fixture f;
     std::optional<StreamMode> mode;
     ui::UiCallbacks cb;
+    std::optional<AppSettings> changed;
     cb.modeChanged = [&](StreamMode m) { mode = m; };
+    cb.settingsChanged = [&](const AppSettings& s) { changed = s; };
     f.ui->SetCallbacks(cb);
     f.ui->SetSettings(AppSettings{});
     f.ui->ShowScreen(ui::Screen::Stream);
@@ -153,7 +166,69 @@ TEST_CASE("stream hotkeys toggle the overlay and the mode; input goes to the gam
     f.Key(VK_ESCAPE);
     f.Frames(1);
     CHECK_FALSE(f.ui->OverlayVisible());
+    // F3 cycles the corner stats (off, compact, full, off) and reports it so the app saves it.
+    f.Key(VK_F3);
+    f.Frames(2);
+    REQUIRE(changed);
+    CHECK(changed->hud.mode == HudMode::Compact);
+    f.Key(VK_F3);
+    f.Frames(2);
+    CHECK(changed->hud.mode == HudMode::Full);
+    f.Key(VK_F3);
+    f.Frames(2);
+    CHECK(changed->hud.mode == HudMode::Off);
     f.Frames(30);   // idle: Record() skips after the fade
+    CHECK(SUCCEEDED(f.device->CheckRemoved()));
+}
+
+TEST_CASE("screen changes report a transition until they finish; the title bar answers hit tests") {
+    Fixture f;
+    f.ui->SetSettings(AppSettings{});
+    f.ui->ShowScreen(ui::Screen::SignIn);
+    f.Frames(2);   // the first screen appears without a transition
+    CHECK_FALSE(f.ui->InTransition());
+    f.ui->ShowScreen(ui::Screen::Consoles);
+    CHECK(f.ui->InTransition());
+    f.Frames(1);
+    CHECK(f.ui->InTransition());   // the crossfade is running
+    f.Settle();
+
+    // 1280x720 at 100%: 1 dp = 1 px, the title bar is 40 px tall with the buttons on the right.
+    CHECK(f.ui->HitTest(1270, 20) == ui::WindowHit::Close);
+    CHECK(f.ui->HitTest(640, 20) == ui::WindowHit::Caption);
+    CHECK(f.ui->HitTest(640, 400) == ui::WindowHit::Client);
+    f.ui->SetWindowChrome({false, false, true});
+    f.Frames(2);
+    CHECK(f.ui->HitTest(1270, 20) == ui::WindowHit::Client);
+    CHECK(SUCCEEDED(f.device->CheckRemoved()));
+}
+
+TEST_CASE("the title bar buttons call the window callbacks") {
+    Fixture f;
+    int minimized = 0, maximized = 0, quits = 0;
+    ui::UiCallbacks cb;
+    cb.minimize = [&] { ++minimized; };
+    cb.toggleMaximize = [&] { ++maximized; };
+    cb.quit = [&] { ++quits; };
+    f.ui->SetCallbacks(cb);
+    f.ui->SetSettings(AppSettings{});
+    f.ui->ShowScreen(ui::Screen::SignIn);
+    f.Frames(3);
+    auto click = [&](int x, int y) {
+        const LPARAM at = MAKELPARAM(x, y);
+        f.ui->HandleMessage(nullptr, WM_MOUSEMOVE, 0, at);
+        f.ui->HandleMessage(nullptr, WM_LBUTTONDOWN, MK_LBUTTON, at);
+        f.ui->HandleMessage(nullptr, WM_LBUTTONUP, 0, at);
+        f.Frames(2);
+    };
+    click(1270, 20);
+    CHECK(quits == 1);   // no game running: quits right away
+    // The other two buttons sit left of the close button, 52 dp each.
+    click(1280 - 52 - 26, 20);
+    CHECK(maximized == 1);
+    click(1280 - 104 - 26, 20);
+    CHECK(minimized == 1);
+    CHECK(quits == 1);
     CHECK(SUCCEEDED(f.device->CheckRemoved()));
 }
 
@@ -165,7 +240,7 @@ TEST_CASE("loading states (skeletons) render on every screen before any data arr
     ui::ConsolesModel cons;
     cons.refreshing = true;   // first refresh, empty list, no account
     f.ui->SetConsoles(cons);
-    for (auto s : {ui::Screen::SignIn, ui::Screen::Consoles, ui::Screen::Connecting, ui::Screen::Stream, ui::Screen::Settings}) {
+    for (auto s : {ui::Screen::Splash, ui::Screen::SignIn, ui::Screen::Consoles, ui::Screen::Connecting, ui::Screen::Stream, ui::Screen::Settings}) {
         f.ui->ShowScreen(s);
         f.ui->SetOverlayVisible(s == ui::Screen::Stream);
         f.Frames(6);
@@ -176,7 +251,7 @@ TEST_CASE("loading states (skeletons) render on every screen before any data arr
     cb.settingsChanged = [&](const AppSettings& s) { changed = s; };
     f.ui->SetCallbacks(cb);
     f.ui->SetSettings(AppSettings{});
-    f.Frames(3);
+    f.Settle();
     f.Key(VK_LEFT);   // resolution row gets focus once it exists
     f.Frames(2);
     REQUIRE(changed);

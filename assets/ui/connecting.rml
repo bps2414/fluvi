@@ -1,54 +1,69 @@
 <rml>
 <!-- SPDX-License-Identifier: GPL-3.0-only -->
 <head>
-	<title>Conectando</title>
-	<link type="text/rcss" href="theme.rcss"/>
+	<title>connecting</title>
+	<link type="text/template" href="shell.rml"/>
 	<style>
 		/* Layout only: values come from theme.rcss tokens. */
-		.panel
+		.page
 		{
 			position: absolute;
-			left: var(--margin); right: var(--margin);
-			top: 0dp; bottom: 0dp;
+			top: var(--top); left: var(--margin); right: var(--margin); bottom: var(--s9);
 			display: flex;
 			flex-direction: column;
 			justify-content: center;
 		}
-		.where { font-size: var(--t-lg); }
+		.where { font-size: var(--t-md); }
 		.where-skeleton { width: 220dp; }
-		.panel h1 { margin-top: var(--s2); }
-		.detail { margin-top: var(--s4); width: 900dp; }
+		.page h1 { margin-top: var(--s2); }
+		.detail { margin-top: var(--s3); max-width: 900dp; }
 		.detail.err { color: var(--danger-text); }
-		.detail-skeleton { margin-top: var(--s4); width: 640dp; }
+		.detail-skeleton { margin-top: var(--s3); width: 560dp; }
 
-		/* The current: the session flows from the console to this screen, station by station.
-		   This is the one place the lantern moves. */
-		.current { margin-top: var(--s10); width: 1240dp; display: flex; flex-direction: row; align-items: center; }
-		.station { position: relative; width: 26dp; height: 26dp; }
+		/* The current: the session flows from the console to this screen, station by station. */
+		.current { margin-top: var(--s8); max-width: 1240dp; display: flex; flex-direction: row; align-items: center; }
+		.end, .station { position: relative; flex: 0 0 auto; }
+		.end .disc
+		{
+			width: 64dp; height: 64dp;
+			box-sizing: border-box;
+			line-height: 60dp;
+			border-radius: var(--r-pill);
+			border: 2dp var(--brand-half);
+			background-color: var(--tile);
+			text-align: center;
+			font-family: "Phosphor";
+			font-size: var(--i-lg);
+			color: var(--brand);
+			transition: background-color border-color color var(--d-slow) cubic-out;
+		}
+		.end.screen .disc { border-color: var(--line-hi); color: var(--silt); }
+		.end.screen.lit .disc { border-color: var(--brand); background-color: var(--brand); color: var(--brand-ink); box-shadow: var(--glow-strong); }
 		.station .dot
 		{
-			width: 26dp; height: 26dp;
+			width: 22dp; height: 22dp;
 			box-sizing: border-box;
 			border-radius: var(--r-pill);
 			border: 2dp var(--line-hi);
 			background-color: var(--bed);
 			transition: background-color border-color var(--d-slow) cubic-out;
 		}
-		.station .label
+		.station.done .dot { border-color: var(--brand); background-color: var(--brand); box-shadow: var(--glow-spark); }
+		.label
 		{
 			position: absolute;
-			top: 44dp; left: -67dp;
-			width: 160dp;
+			top: 80dp; left: -64dp;
+			width: 150dp;
 			text-align: center;
-			font-size: var(--t-sm);
+			font-size: var(--t-xs);
 			font-weight: 600;
 			color: var(--silt);
 			transition: color var(--d-slow) cubic-out;
 		}
-		.station.active .dot { border-color: var(--brand); background-color: var(--brand-soft); animation: var(--d-spin) breathe infinite alternate cubic-in-out; }
-		.station.active .label { color: var(--foam); }
-		.station.done .dot { border-color: var(--brand); background-color: var(--brand); box-shadow: var(--glow-done); }
-		.station.done .label { color: var(--bank); }
+		.end .label { left: -43dp; }
+		.station .label { top: 59dp; }   /* same distance below the line as the end labels (80 - 32 + 11) */
+		.station.done .label, .end.lit .label { color: var(--bank); }
+		.station.next .label { color: var(--foam); }
 
 		.reach { position: relative; flex: 1; height: 3dp; margin: 0dp var(--s2h); border-radius: var(--r-hair); background-color: var(--track-dim); }
 		.reach .fill { width: 0%; height: 3dp; border-radius: var(--r-hair); background-color: var(--brand); transition: width var(--d-fill) cubic-in-out; }
@@ -70,23 +85,26 @@
 			to   { left: 100%; opacity: 0; }
 		}
 
-		.current.fail .station .dot { border-color: var(--danger-dim); background-color: var(--bed); box-shadow: none; animation: none; }
+		.current.fail .end .disc { border-color: var(--danger-dim); color: var(--danger); background-color: var(--tile); box-shadow: none; }
+		.current.fail .station .dot { border-color: var(--danger-dim); background-color: var(--bed); box-shadow: none; }
 		.current.fail .station.done .dot { border-color: var(--danger); background-color: var(--danger-dim); }
-		.current.fail .reach .fill { background-color: var(--danger-mid); }
+		.current.fail .reach .fill { background-color: var(--danger-dim); }
 		.current.fail .reach .spark { display: none; }
+		.current.fail .station.next .label { color: var(--silt); }
 
-		.actions { margin-top: var(--s10); display: flex; flex-direction: row; gap: var(--s3); }
+		.actions { margin-top: var(--s9); display: flex; flex-direction: row; gap: var(--s3); }
 	</style>
 </head>
-<body class="solid" data-model="fluvi">
+<body template="shell" class="solid" data-model="fluvi">
 	<div class="topbar">
-		<div class="brand">
-			<div class="brand-mark"><div class="w w1"></div><div class="w w2"></div><div class="w w3"></div></div>
-			<div class="brand-name">Fluvi</div>
+		<div class="brand-small" data-if="!chrome.visible"><svg class="mark" src="brand/fluvi-mark.svg"/><svg class="word" src="brand/fluvi-wordmark.svg"/></div>
+		<div data-if="chrome.visible"></div>
+		<div class="actions">
+			<button class="ghost" id="connecting-quit" data-event-click="quit"><span class="icon">&#xE3DA;</span><span>[common.quit]</span></button>
 		</div>
 	</div>
 
-	<div class="panel arrive">
+	<div class="page arrive">
 		<div class="where label-brand" data-if="!conn.loading">{{ conn.console }}</div>
 		<div class="skeleton-line where where-skeleton" data-if="conn.loading"></div>
 		<h1>{{ conn.title }}</h1>
@@ -94,21 +112,26 @@
 		<div class="lead detail-skeleton" data-if="conn.loading"><div class="skeleton-line w-80"></div></div>
 
 		<div class="current" data-class-fail="conn.failed">
-			<div class="station" data-class-active="conn.stage == 0 &amp;&amp; !conn.failed" data-class-done="conn.stage > 0"><div class="dot"></div><div class="label">Sessão</div></div>
-			<div class="reach" data-class-active="conn.stage == 0" data-class-done="conn.stage > 0"><div class="fill"></div><div class="spark"></div></div>
-			<div class="station" data-class-active="conn.stage == 1 &amp;&amp; !conn.failed" data-class-done="conn.stage > 1"><div class="dot"></div><div class="label">Canal</div></div>
-			<div class="reach" data-class-active="conn.stage == 1" data-class-done="conn.stage > 1"><div class="fill"></div><div class="spark"></div></div>
-			<div class="station" data-class-active="conn.stage == 2 &amp;&amp; !conn.failed" data-class-done="conn.stage > 2"><div class="dot"></div><div class="label">Rota</div></div>
-			<div class="reach" data-class-active="conn.stage == 2" data-class-done="conn.stage > 2"><div class="fill"></div><div class="spark"></div></div>
-			<div class="station" data-class-done="conn.stage == 3"><div class="dot"></div><div class="label">Imagem</div></div>
+			<div class="end"><div class="disc">&#xE26E;</div><div class="label">[conn.station_console]</div></div>
+			<div class="reach" data-class-active="conn.stage == 0 &amp;&amp; !conn.failed" data-class-done="conn.stage > 0"><div class="fill"></div><div class="spark"></div></div>
+			<div class="station" data-class-done="conn.stage > 0" data-class-next="conn.stage == 0"><div class="dot"></div><div class="label">[conn.station_session]</div></div>
+			<div class="reach" data-class-active="conn.stage == 1 &amp;&amp; !conn.failed" data-class-done="conn.stage > 1"><div class="fill"></div><div class="spark"></div></div>
+			<div class="station" data-class-done="conn.stage > 1" data-class-next="conn.stage == 1"><div class="dot"></div><div class="label">[conn.station_channel]</div></div>
+			<div class="reach" data-class-active="conn.stage == 2 &amp;&amp; !conn.failed" data-class-done="conn.stage > 2"><div class="fill"></div><div class="spark"></div></div>
+			<div class="station" data-class-done="conn.stage > 2" data-class-next="conn.stage == 2"><div class="dot"></div><div class="label">[conn.station_route]</div></div>
+			<div class="reach" data-class-active="conn.stage == 3 &amp;&amp; !conn.failed" data-class-done="conn.stage > 3"><div class="fill"></div><div class="spark"></div></div>
+			<div class="end screen" data-class-lit="conn.stage == 3 &amp;&amp; !conn.failed"><div class="disc">&#xE32E;</div><div class="label">[conn.station_screen]</div></div>
 		</div>
 
 		<div class="actions">
-			<button autofocus="" id="connecting-cancel" data-if="!conn.failed" data-event-click="cancel_connect">Cancelar</button>
-			<button class="primary" autofocus="" id="connecting-back" data-if="conn.failed" data-event-click="cancel_connect">Voltar aos consoles</button>
+			<button autofocus="" id="connecting-cancel" data-if="!conn.failed" data-event-click="cancel_connect"><span>[common.cancel]</span></button>
+			<button class="primary" autofocus="" id="connecting-retry" data-if="conn.failed" data-event-click="retry_connect"><span class="icon">&#xE038;</span><span>[conn.retry]</span></button>
+			<button id="connecting-back" data-if="conn.failed" data-event-click="cancel_connect"><span class="icon">&#xE058;</span><span>[common.back]</span></button>
 		</div>
 	</div>
 
-	<div class="hints"><span><span class="keycap">Esc</span>cancela</span></div>
+	<div class="hints">
+		<span class="hint"><span class="keycap kb">[common.key_esc]</span><span class="padkey gp">B</span><span data-if="!conn.failed">[common.cancel]</span><span data-if="conn.failed">[common.back]</span></span>
+	</div>
 </body>
 </rml>

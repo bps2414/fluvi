@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// Fluvi app: pure mappings from xhome data to what the UI shows (and the user-facing error sentences, in pt-BR).
+// Fluvi app: pure mappings from xhome data to what the UI shows (and the user-facing error sentences, translated through fluvi::i18n).
 #pragma once
 #include <exception>
 #include <string>

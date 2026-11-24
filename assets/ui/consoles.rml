@@ -1,157 +1,146 @@
 <rml>
 <!-- SPDX-License-Identifier: GPL-3.0-only -->
 <head>
-	<title>Consoles</title>
-	<link type="text/rcss" href="theme.rcss"/>
+	<title>consoles</title>
+	<link type="text/template" href="shell.rml"/>
 	<style>
 		/* Layout only: values come from theme.rcss tokens. */
-		.account
+		.account-menu { top: 76dp; right: var(--s6); }
+		.chip-skeleton { width: 200dp; margin: 0dp var(--s2); }
+
+		.page
 		{
+			position: absolute;
+			top: var(--top); left: var(--margin); right: var(--margin); bottom: var(--s9);
 			display: flex;
-			flex-direction: row;
-			align-items: center;
-			gap: var(--s3);
-			margin-left: var(--s3);
-			padding: var(--s1h) var(--s5) var(--s1h) var(--s1h);
-			border-radius: var(--r-pill);
-			background-color: var(--water);
-			font-size: var(--t-sm);
-			font-weight: 600;
+			flex-direction: column;
+			justify-content: center;
 		}
-		.avatar
-		{
-			width: 38dp; height: 38dp; border-radius: var(--r-pill);
-			line-height: 38dp; text-align: center;
-			font-weight: bold;
-			color: var(--brand-ink);
-			decorator: linear-gradient(150deg, var(--brand-hi), var(--brand-deep));
-		}
-		.account-skeleton { margin-left: var(--s3); width: 180dp; }
+		.searching { display: flex; flex-direction: row; align-items: center; gap: var(--s3); color: var(--bank); font-size: var(--t-xs); margin-bottom: var(--s4); }
+		.searching .runner { width: 160dp; }
+		.page .notice { margin-bottom: var(--s5); max-width: 900dp; }
 
-		.page { position: absolute; top: 200dp; left: var(--margin); right: var(--margin); bottom: 0dp; }
-		.heading { display: flex; flex-direction: row; align-items: flex-end; justify-content: space-between; }
-		.heading .lead { margin-top: var(--s3); }
-		.searching { display: flex; flex-direction: row; align-items: center; gap: var(--s3); color: var(--bank); font-size: var(--t-sm); padding-bottom: var(--s1h); }
-		.page .notice { margin-top: var(--s5); width: 960dp; }
+		/* One console (the usual case): the console is the whole screen. Its name is what people recognise. */
+		.state { display: flex; flex-direction: row; align-items: center; gap: var(--s2h); font-weight: 600; color: var(--bank); }
+		.on .state { color: var(--alive); }
+		.hero .name { margin-top: var(--s3); font-size: var(--t-hero); white-space: nowrap; overflow: hidden; }
+		.hero .model { margin-top: var(--s2); color: var(--silt); }
+		.hero .go { margin-top: var(--s7); display: flex; flex-direction: row; align-items: center; gap: var(--s4); min-height: var(--btn); }
+		.waiting { display: flex; flex-direction: row; align-items: center; gap: var(--s4); color: var(--bank); }
+		.waiting .runner { width: 200dp; }
+		.hero-skeleton .skeleton-line.state-line { width: 260dp; }
+		.hero-skeleton .skeleton-line.hero { width: 440dp; }
+		.hero-skeleton .skeleton-line.model-line { width: 180dp; }
+		.hero-skeleton .skeleton-line.chip { margin-top: var(--s7); width: var(--ctl); }
 
-		.shelf { margin-top: var(--s8); display: flex; flex-direction: row; flex-wrap: wrap; gap: var(--s5); }
-		.tile-size { width: 400dp; height: 300dp; }
-
-		/* One tile per console: the room name is what people recognise, so it is the largest thing on it. */
+		/* Several consoles: a shelf, the last one used focused. */
+		.heading .lead { margin-top: var(--s2); }
+		.shelf { margin-top: var(--s6); display: flex; flex-direction: row; gap: var(--s4); overflow-x: auto; padding: var(--s2) var(--s1) var(--s3) var(--s1); }
 		.tile
 		{
-			position: relative;
+			flex: 0 0 auto;
+			width: 340dp; height: 236dp;
 			box-sizing: border-box;
-			padding: var(--s6) var(--s6) var(--s5) var(--s6);
+			padding: var(--s5);
 			border-radius: var(--r-tile);
 			background-color: var(--tile);
-			border: 2dp var(--line);
+			border: 2dp var(--tile-line);
 			display: flex;
 			flex-direction: column;
 			justify-content: space-between;
 			transition: background-color border-color transform var(--d-fast) cubic-out;
 		}
 		.tile:hover { background-color: var(--tile-hi); }
-		.tile:focus-visible
-		{
-			border-color: var(--brand);
-			background-color: var(--tile-hi);
-			transform: translateY(-6dp);
-			box-shadow: var(--shadow-tile);
-		}
-		.tile.busy { opacity: 0.85; }
+		.tile:focus-visible { border-color: var(--brand); background-color: var(--tile-hi); transform: translateY(-4dp); box-shadow: var(--shadow-tile); }
+		.tile .name { font-size: var(--t-2xl); white-space: nowrap; overflow: hidden; }
+		.tile .model { margin-top: var(--s1); font-size: var(--t-xs); color: var(--silt); }
+		.cta { display: flex; flex-direction: row; align-items: center; gap: var(--s2); font-weight: 600; color: var(--bank); }
+		.tile:focus-visible .cta, .tile:hover .cta { color: var(--brand); }
 
-		.state { display: flex; flex-direction: row; align-items: center; gap: var(--s2h); font-size: var(--t-sm); font-weight: 600; color: var(--silt); }
-		.tile.on .state { color: var(--alive); }
-		.tile .name { font-size: var(--t-display); }
-		.tile .model { margin-top: var(--s1h); font-size: var(--t-sm); color: var(--bank); }
-
-		.go { display: flex; flex-direction: row; align-items: center; justify-content: space-between; }
-		.cta
-		{
-			height: 46dp; line-height: 46dp; padding: 0dp var(--s5);
-			border-radius: var(--r-pill);
-			font-size: var(--t-sm); font-weight: 600;
-			background-color: var(--water-hi);
-			color: var(--foam);
-			transition: background-color color var(--d-fast) cubic-out;
-		}
-		.tile:focus-visible .cta, .tile:hover .cta { background-color: var(--brand); color: var(--brand-ink); }
-		.waiting { display: flex; flex-direction: row; align-items: center; gap: var(--s3); color: var(--bank); font-size: var(--t-sm); }
-
-
-		.empty { margin-top: var(--s8); width: 720dp; }
-		.empty h2 { margin-bottom: var(--s3); }
-		.empty .muted { line-height: 1.5; }
+		.empty { max-width: 760dp; }
+		.empty .lead { margin-top: var(--s3); }
+		.empty button { margin-top: var(--s6); }
 	</style>
 </head>
-<body class="solid" data-model="fluvi">
+<body template="shell" class="solid" data-model="fluvi">
 	<div class="topbar">
-		<div class="brand">
-			<div class="brand-mark"><div class="w w1"></div><div class="w w2"></div><div class="w w3"></div></div>
-			<div class="brand-name">Fluvi</div>
-		</div>
-		<div class="right">
-			<button class="ghost" id="consoles-refresh" data-event-click="refresh_consoles" data-class-disabled="cons.refreshing">Atualizar lista</button>
-			<button class="ghost" id="consoles-settings" data-event-click="open_settings">Configurações</button>
-			<button class="ghost" id="consoles-signout" data-event-click="sign_out">Sair da conta</button>
-			<div class="account" data-if="cons.has_account">
+		<div class="brand-small" data-if="!chrome.visible"><svg class="mark" src="brand/fluvi-mark.svg"/><svg class="word" src="brand/fluvi-wordmark.svg"/></div>
+		<div data-if="chrome.visible"></div>
+		<div class="actions">
+			<button class="ghost" id="consoles-refresh" data-event-click="refresh_consoles" data-class-disabled="cons.refreshing"><span class="icon">&#xE036;</span><span>[consoles.refresh]</span></button>
+			<button class="ghost" id="consoles-settings" data-event-click="open_settings"><span class="icon">&#xE272;</span><span>[common.settings]</span></button>
+			<button class="ghost" id="consoles-quit" data-event-click="quit"><span class="icon">&#xE3DA;</span><span>[common.quit]</span></button>
+			<div class="chip" id="account-chip" data-if="cons.has_account" data-class-open="cons.menu" data-event-click="account_menu">
 				<div class="avatar">{{ cons.initial }}</div>
 				<span>{{ cons.account }}</span>
+				<span class="icon">&#xE136;</span>
 			</div>
-			<div class="skeleton-line chip account-skeleton" data-if="!cons.has_account &amp;&amp; (cons.loading || cons.refreshing)"></div>
+			<div class="skeleton-line chip chip-skeleton" data-if="!cons.has_account &amp;&amp; (cons.loading || cons.refreshing)"></div>
 		</div>
 	</div>
 
 	<div class="page arrive">
-		<div class="heading">
-			<div>
-				<h1>Seus consoles</h1>
-				<div class="lead">Escolha onde jogar. O console precisa estar com o Remote Play ativado.</div>
+		<div class="searching" data-if="cons.refreshing &amp;&amp; !cons.loading"><div class="runner"><div class="run"></div></div><span>[consoles.searching]</span></div>
+		<div class="notice" data-if="cons.error != ''"><span class="icon">&#xE4E2;</span><span>{{ cons.error }}</span></div>
+
+		<!-- One console: a hero. -->
+		<div class="hero" data-if="cons.single">
+			<div data-for="c : cons.list" data-class-on="c.on">
+				<div class="state"><div class="led" data-class-alive="c.on"></div><span>{{ c.power }}</span></div>
+				<div class="name condensed">{{ c.name }}</div>
+				<div class="model">{{ c.type }}</div>
+				<div class="go">
+					<button class="primary wide" autofocus="" id="console-play" data-if="!c.busy" data-event-click="pick(c.id)">
+						<span class="icon" data-if="c.on">&#xE3D0;</span><span class="icon" data-if="!c.on">&#xE3DA;</span><span>{{ c.action }}</span>
+					</button>
+					<div class="waiting" data-if="c.busy"><div class="runner"><div class="run"></div></div><span>[consoles.waking]</span></div>
+				</div>
 			</div>
-			<div class="searching" data-if="cons.refreshing"><div class="spinner"></div><span>Procurando consoles</span></div>
 		</div>
 
-		<div class="notice" data-if="cons.error != ''">{{ cons.error }}</div>
+		<!-- Placeholder in the hero's shape while the first list (or an empty refresh) is pending. -->
+		<div class="hero-skeleton" data-if="cons.loading">
+			<div class="skeleton-line state-line"></div>
+			<div class="skeleton-line hero"></div>
+			<div class="skeleton-line model-line"></div>
+			<div class="skeleton-line chip"></div>
+		</div>
 
-		<div class="shelf">
-			<div class="tile tile-size" data-for="c : cons.list" data-attr-id="'console-' + it_index" autofocus=""
-			     data-class-on="c.on" data-class-busy="c.busy" data-event-click="pick(c.id)">
-				<div class="state"><div class="led" data-class-alive="c.on"></div><span>{{ c.power }}</span></div>
-				<div>
-					<div class="name display">{{ c.name }}</div>
-					<div class="model">{{ c.type }}</div>
+		<!-- Several consoles: a shelf. -->
+		<div data-if="cons.list.size > 1">
+			<div class="heading">
+				<h1>[consoles.title]</h1>
+				<div class="lead">[consoles.lead]</div>
+			</div>
+			<div class="shelf">
+				<div class="tile" data-for="c : cons.list" data-attr-id="'console-' + it_index"
+				     data-class-on="c.on" data-event-click="pick(c.id)">
+					<div class="state"><div class="led" data-class-alive="c.on"></div><span>{{ c.power }}</span></div>
+					<div>
+						<div class="name condensed">{{ c.name }}</div>
+						<div class="model">{{ c.type }}</div>
+					</div>
+					<div class="cta" data-if="!c.busy"><span class="icon" data-if="c.on">&#xE3D0;</span><span class="icon" data-if="!c.on">&#xE3DA;</span><span>{{ c.action }}</span></div>
+					<div class="waiting" data-if="c.busy"><div class="runner"><div class="run"></div></div></div>
 				</div>
-				<div class="go">
-					<div class="waiting" data-if="c.busy"><div class="spinner"></div><span>Aguarde</span></div>
-					<div class="cta" data-if="!c.busy">{{ c.action }}</div>
-				</div>
-			</div>
-
-			<!-- Placeholders in the tiles' real shape while the first list (or an empty refresh) is pending. -->
-			<div class="skeleton-card tile-size" data-if="cons.loading">
-				<div class="skeleton-line w-40"></div>
-				<div><div class="skeleton-line display w-60"></div><div class="skeleton-line w-40"></div></div>
-				<div class="skeleton-line chip"></div>
-			</div>
-			<div class="skeleton-card tile-size" data-if="cons.loading">
-				<div class="skeleton-line w-40"></div>
-				<div><div class="skeleton-line display w-80"></div><div class="skeleton-line w-40"></div></div>
-				<div class="skeleton-line chip"></div>
-			</div>
-			<div class="skeleton-card tile-size" data-if="cons.loading">
-				<div class="skeleton-line w-40"></div>
-				<div><div class="skeleton-line display w-60"></div><div class="skeleton-line w-40"></div></div>
-				<div class="skeleton-line chip"></div>
 			</div>
 		</div>
 
 		<div class="empty" data-if="cons.list.size == 0 &amp;&amp; !cons.refreshing &amp;&amp; !cons.loading">
-			<h2>Nenhum console nesta conta</h2>
-			<div class="muted">Ligue o console (ou deixe em modo Instantâneo), ative “Permitir Remote Play” nas configurações de dispositivos e conexões dele, e escolha Atualizar lista.</div>
+			<h1>[consoles.empty_title]</h1>
+			<div class="lead">[consoles.empty_body]</div>
+			<button class="primary" autofocus="" id="consoles-empty-refresh" data-event-click="refresh_consoles"><span class="icon">&#xE036;</span><span>[consoles.refresh]</span></button>
 		</div>
 	</div>
 
-	<div class="hints"><span><span class="keycap">←</span><span class="keycap">→</span>escolhe o console</span><span><span class="keycap">Enter</span>conecta</span></div>
+	<div class="menu account-menu" data-if="cons.menu">
+		<div class="menu-item" id="menu-switch" data-event-click="switch_account"><span class="icon">&#xE756;</span><span>[consoles.switch_account]</span></div>
+		<div class="menu-item" id="menu-signout" data-event-click="sign_out"><span class="icon">&#xE42A;</span><span>[consoles.sign_out]</span></div>
+	</div>
+
+	<div class="hints">
+		<span class="hint"><span class="keycap kb">[common.key_enter]</span><span class="padkey gp">A</span><span>[consoles.hint_play]</span></span>
+		<span class="hint"><span class="keycap kb">[common.key_arrows]</span><span class="padkey gp">&#xE13A;</span><span>[common.hint_move]</span></span>
+	</div>
 </body>
 </rml>

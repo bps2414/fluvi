@@ -5,7 +5,7 @@
   "dependencies": [
     { "name": "libdatachannel", "default-features": false, "features": ["srtp"] },
     "opus",
-    { "name": "rmlui", "default-features": false, "features": ["freetype"] },
+    { "name": "rmlui", "default-features": false, "features": ["freetype", "svg"] },
     "freetype",
     "nlohmann-json",
     { "name": "imgui", "features": ["dx12-binding", "win32-binding"] },

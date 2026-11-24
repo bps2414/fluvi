@@ -30,6 +30,8 @@ struct AppHooks {
     std::function<void(const AppSettings&)> settingsApplied;  // every settings change (chain->SetConfig(ResolveChainConfig(...)))
     std::function<void()> streamStarted;                      // Connected: the UI is on Screen::Stream
     std::function<void()> streamStopped;                      // cancel / disconnect / ended / failed after being up
+    std::function<void()> minimize;                           // title bar buttons (any thread: the window posts to its own)
+    std::function<void()> toggleMaximize;
 };
 
 class AppController {
@@ -50,7 +52,7 @@ public:
     bool QuitRequested() const { return quit_.load(); }
     bool Streaming() const { return streaming_.load(); }
     // Navigate the UI with the pad: always, except while the stream owns the pad (then only with a menu open).
-    bool PadNavEnabled() const { return !streaming_.load() || ui_.WantsInput(); }
+    bool PadNavEnabled() const { return !streaming_.load() || showStreamPending_.load() || ui_.WantsInput(); }
     GamepadState PadState() const;
     AppSettings Settings() const;
     bool DesiredFullscreen() const { return fullscreen_.load(); }
@@ -64,6 +66,18 @@ public:
     // The overlay chord (View + Menu) from the pad. Only meaningful on the stream screen.
     void ToggleOverlayFromPad();
 
+    // Entering the stream: once connected, the render loop draws video under the Connecting screen and calls
+    // OnFirstFramePresented() after the first picture was presented; only then does the UI show the stream screen.
+    bool StreamShowPending() const { return showStreamPending_.load(); }
+    void OnFirstFramePresented();
+    // No picture arrived in time: leaves the stream with a friendly error on the Connecting screen.
+    void ReportNoVideo();
+
+    // The window's last windowed placement (render thread, when it changed); saved with the settings.
+    void SaveWindowPlacement(const WindowSettings& placement);
+    // fluvi::i18n::Load() switched the language: re-translates the text the app keeps.
+    void OnLanguageChanged();
+
 private:
     void InstallCallbacks();
     void StartSignIn();
@@ -73,14 +87,17 @@ private:
     void OnSignedIn();
     void RefreshConsoles();
     void PublishConsoles();
+    void CheckStoredAccount();
     void Wake(const std::string& id);
+    void WakeAndConnect(const std::string& id);
+    void SetConnectingName(const std::string& id);
     void Connect(const std::string& id);
     void CancelConnect();
     void Disconnect();
     void OnStage(StreamStage stage);
     void OnStreamFailed(const std::string& reason);
     void OnStreamEnded(const std::string& reason);
-    void SettingsChanged(const AppSettings& s);
+    void SettingsChanged(const AppSettings& incoming);
     void OnPad(const input::GamepadEvent& e);
     std::shared_ptr<xhome::StreamApi> EnsureApi();
     // True when the error means the saved login is gone (and moved the UI to sign-in).
@@ -89,6 +106,7 @@ private:
     ui::Ui& ui_;
     AppHooks hooks_;
     std::atomic<bool> quit_{false}, streaming_{false}, fullscreen_{true};
+    std::atomic<bool> showStreamPending_{false};   // connected, waiting for the first presented frame
     std::atomic<uint32_t> fullscreenKey_{0x7A};
 
     mutable std::mutex settingsMutex_;

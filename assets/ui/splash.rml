@@ -1,0 +1,44 @@
+<rml>
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<head>
+	<title>splash</title>
+	<link type="text/template" href="shell.rml"/>
+	<style>
+		/* Layout only: values come from theme.rcss tokens. The current draws the mark left to right, then the
+		   wordmark arrives; under it a thin line runs while the account is checked. */
+		.stage
+		{
+			position: absolute;
+			top: 0dp; bottom: 0dp; left: 0dp; right: 0dp;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+		}
+		.lockup { display: flex; flex-direction: row; align-items: center; gap: var(--s4); height: 120dp; }
+		.draw { width: 120dp; height: 120dp; overflow: hidden; animation: var(--d-draw) draw cubic-in-out; }
+		.draw svg { width: 120dp; height: 120dp; }
+		.word { width: 248dp; height: 120dp; animation: var(--d-late) word-in cubic-out; }
+		@keyframes draw { from { width: 0dp; } to { width: 120dp; } }
+		@keyframes word-in
+		{
+			from { opacity: 0; transform: translateX(-16dp); }
+			55%  { opacity: 0; transform: translateX(-16dp); }
+			to   { opacity: 1; transform: translateX(0dp); }
+		}
+		.runner { margin-top: var(--s7); width: 320dp; }
+		.status { margin-top: var(--s4); color: var(--bank); animation: var(--d-late) word-in cubic-out; }
+	</style>
+</head>
+<body template="shell" class="solid" data-model="fluvi">
+	<div class="stage">
+		<div class="lockup">
+			<div class="draw"><svg src="brand/fluvi-mark.svg"/></div>
+			<svg class="word" src="brand/fluvi-wordmark.svg"/>
+		</div>
+		<div class="runner"><div class="run"></div></div>
+		<div class="status" data-if="splash.status != ''">{{ splash.status }}</div>
+		<div class="status" data-if="splash.status == ''">[splash.checking]</div>
+	</div>
+</body>
+</rml>

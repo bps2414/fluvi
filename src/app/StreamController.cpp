@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "Models.h"
+#include "fluvi/common/I18n.h"
 #include "fluvi/core/Log.h"
 #include "fluvi/xhome/Sdp.h"
 
@@ -147,7 +148,7 @@ private:
             const auto deadline = Clock::now() + 120s;
             for (;;) {
                 if (!Live(*a)) break;
-                if (Clock::now() > deadline) { fail("O console demorou demais para ficar pronto. Tente de novo."); goto cleanup; }
+                if (Clock::now() > deadline) { fail(i18n::Tr("app.err.consoleNotReady")); goto cleanup; }
                 const xhome::SessionState st = api->state(sessionId);
                 if (st.state == "Provisioned") break;
                 if (st.state == "Failed") {
@@ -182,11 +183,14 @@ private:
                 ApiSignaling signaling(*api, sessionId);
                 std::string error;
                 if (!rtc->start(signaling, cfg, &error)) {
-                    if (Live(*a)) fail("Não foi possível abrir a conexão de vídeo: " + error);
+                    if (Live(*a)) {
+                        FLUVI_WARN("app", "video connection failed: {}", error);
+                        fail(i18n::Tr("app.err.videoStart"));
+                    }
                     goto cleanup;
                 }
                 if (!Live(*a)) goto cleanup;
-                if (!rtc->waitReady(10s)) { fail("A conexão com o console abriu, mas a transmissão não começou. Tente de novo; se repetir, reinicie o console."); goto cleanup; }
+                if (!rtc->waitReady(10s)) { fail(i18n::Tr("app.err.streamSilent")); goto cleanup; }
                 rtc->requestKeyframe();
 
                 // HOOK(chain): the decoder and the QualityChain are created here by main.cpp.

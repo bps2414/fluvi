@@ -1,0 +1,35 @@
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+<!-- Fluvi shell: the title bar the window hit-tests (chrome-*), the content slot, the quit confirmation and the
+     toast. Screens use it with the body attribute template="shell"; their body content lands in #content. -->
+<template name="shell" content="content">
+<head>
+	<link type="text/rcss" href="theme.rcss"/>
+</head>
+<body data-model="fluvi">
+	<div class="frame" id="content" data-class-full="!chrome.visible"></div>
+
+	<div class="chrome" id="chrome-bar" data-if="chrome.visible">
+		<div class="chrome-brand"><svg class="chrome-mark" src="brand/fluvi-mark.svg"/><svg class="chrome-word" src="brand/fluvi-wordmark.svg"/></div>
+		<div class="chrome-drag"></div>
+		<div class="chrome-btn" id="chrome-min" data-event-click="chrome_min"><span class="icon sm">&#xE32A;</span></div>
+		<div class="chrome-btn" id="chrome-max" data-event-click="chrome_max">
+			<span class="icon sm" data-if="!chrome.maximized">&#xE45E;</span>
+			<span class="icon sm" data-if="chrome.maximized">&#xE1CA;</span>
+		</div>
+		<div class="chrome-btn close" id="chrome-close" data-event-click="quit"><span class="icon sm">&#xE4F6;</span></div>
+	</div>
+
+	<div class="toast-slot" data-class-on="ui.toast_on"><div class="toast"><span class="icon">&#xE182;</span><span>{{ ui.toast }}</span></div></div>
+
+	<div class="scrim" data-if="ui.confirm_quit">
+		<div class="dialog">
+			<h2>[common.quit_title]</h2>
+			<div class="lead">[common.quit_body]</div>
+			<div class="dialog-actions">
+				<button id="dlg-stay" data-event-click="cancel_quit"><span>[common.quit_stay]</span></button>
+				<button class="danger" id="dlg-quit" data-event-click="confirm_quit"><span class="icon">&#xE3DA;</span><span>[common.quit_confirm]</span></button>
+			</div>
+		</div>
+	</div>
+</body>
+</template>

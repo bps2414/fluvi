@@ -1,17 +1,1 @@
-<!-- SPDX-License-Identifier: GPL-3.0-only -->
-<!-- Fluvi mark: a lantern-amber tile with three staggered current lines (the stream flowing left to right).
-     Same geometry as .brand-mark in assets/ui/theme.rcss (40 dp tile, scaled x6.4). Source for the app icon. -->
-<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
-  <defs>
-    <linearGradient id="lantern" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#ffd08a"/>
-      <stop offset="1" stop-color="#e0973d"/>
-    </linearGradient>
-  </defs>
-  <rect width="256" height="256" rx="77" fill="url(#lantern)"/>
-  <g fill="#2b1a05">
-    <rect x="51" y="70" width="128" height="26" rx="13"/>
-    <rect x="90" y="115" width="115" height="26" rx="13"/>
-    <rect x="58" y="160" width="83" height="26" rx="13"/>
-  </g>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64"><path d="M47.5 13.5C45.6 9 41.7 6.5 37 6.5C30.6 6.5 27 11 27 18.5V43.5C27 51.5 22.6 57.5 15 57.5" fill="none" stroke="#FFB547" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 28.5Q20.5 24 26 28.5T38 28.5" fill="none" stroke="#FFB547" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/></svg>

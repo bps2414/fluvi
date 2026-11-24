@@ -1,6 +1,6 @@
 # fluvi.exe: window thread, render loop, sign-in / consoles / connecting, saved settings, pad navigation.
-#   fluvi_app_core   the logic without a window or a GPU (settings JSON, pad navigation, model mapping, stream
-#                    controller, app controller): what the tests link
+#   fluvi_app_core   the logic without a window or a GPU (settings JSON, pad navigation, model mapping, window
+#                    geometry, stream controller, app controller): what the tests link
 #   fluvi            the exe (window + render loop + fluvi.rc with the icon)
 find_package(nlohmann_json CONFIG REQUIRED)
 
@@ -8,6 +8,7 @@ add_library(fluvi_app_core STATIC
   SettingsStore.cpp
   PadNav.cpp
   Models.cpp
+  WindowGeometry.cpp
   StreamController.cpp
   App.cpp)
 fluvi_defaults(fluvi_app_core)
@@ -18,7 +19,7 @@ target_link_libraries(fluvi_app_core
 
 add_executable(fluvi WIN32 main.cpp Window.cpp fluvi.rc)
 fluvi_defaults(fluvi)
-target_link_libraries(fluvi PRIVATE fluvi_app_core fluvi_gpu fluvi_pipeline fluvi_media fluvi_audio user32 winmm)
+target_link_libraries(fluvi PRIVATE fluvi_app_core fluvi_gpu fluvi_pipeline fluvi_media fluvi_audio user32 winmm dwmapi shcore shell32)
 # FSR 4 + FSR FG (modo Liso): the FidelityFX loader, upscaler and framegeneration DLLs ship next to fluvi.exe (FFmpeg's are copied by fluvi_media).
 add_custom_command(TARGET fluvi POST_BUILD
   COMMAND "${CMAKE_COMMAND}" -E copy_if_different
@@ -31,4 +32,5 @@ fluvi_add_test(fluvi_app_tests
   SOURCES "${FLUVI_ROOT}/tests/app/AppTests.cpp"
   LIBS fluvi_app_core
   LABELS app)
-target_compile_definitions(fluvi_app_tests PRIVATE FLUVI_APP_TEST_TMP="${CMAKE_BINARY_DIR}/app-test-tmp")
+target_compile_definitions(fluvi_app_tests PRIVATE FLUVI_APP_TEST_TMP="${CMAKE_BINARY_DIR}/app-test-tmp"
+                                                  FLUVI_I18N_DIR="${FLUVI_ROOT}/assets/i18n")

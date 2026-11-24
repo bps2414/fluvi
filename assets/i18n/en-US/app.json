@@ -1,3 +1,47 @@
 {
-  "app.title": "Fluvi"
+  "app.splash.checking": "Checking your account",
+  "app.account.chip": "Microsoft account",
+
+  "app.signin.waiting": "Waiting for you to confirm on the other device",
+  "app.signin.sessionExpired": "Your session expired. Sign in again.",
+  "app.signin.codeExpired": "The code expired. Choose Sign in to get a new one.",
+  "app.signin.declined": "The sign-in was declined on the other device.",
+  "app.signin.failed": "Could not sign in. Try again.",
+
+  "app.err.network": "Can't reach the servers. Check your internet connection and try again.",
+  "app.err.denied": "The service refused access. Sign in again.",
+  "app.err.notFound": "The service could not find that. The session may have ended.",
+  "app.err.tooMany": "Too many attempts in a row. Wait a moment and try again.",
+  "app.err.server": "The servers are having trouble. Try again in a moment.",
+  "app.err.service": "The service returned an error. Try again in a moment.",
+  "app.err.generic": "Something went wrong. Try again.",
+
+  "app.err.xbox.noProfile": "This Microsoft account has no Xbox profile yet. Sign in once at xbox.com with it, create the profile and try again.",
+  "app.err.xbox.region": "Xbox Live is not available in the country or region of this account.",
+  "app.err.xbox.adult": "This account must complete the adult verification at xbox.com before it can be used.",
+  "app.err.xbox.child": "This is a child account: a parent must allow its use in the Microsoft Family group.",
+
+  "app.err.consoleOff": "Turn the console on, or set its power mode to Sleep and turn on Remote Play in its settings.",
+  "app.err.consoleBusy": "The console is already streaming to another device. Close the other session and try again.",
+  "app.err.consoleTimeout": "The console took too long to respond. Try again.",
+  "app.err.consoleRefused": "The console refused the connection. Try again in a few seconds.",
+  "app.err.consoleNotReady": "The console took too long to get ready. Try again.",
+  "app.err.wakeTimeout": "The console did not turn on within {seconds} seconds. Check its power and network.",
+  "app.err.videoStart": "Could not open the video connection. Try again.",
+  "app.err.streamSilent": "The connection to the console opened, but the stream did not start. Try again; if it keeps happening, restart the console.",
+  "app.err.noVideo": "The connection opened, but no video showed up. Try again; if it keeps happening, restart the console.",
+
+  "app.ended.lost": "The connection to the console was lost.",
+  "app.ended.shutdown": "The console was turned off or restarted.",
+  "app.ended.expired": "The session ended on the server.",
+  "app.ended.generic": "The stream ended.",
+
+  "app.warn.fsr4Fallback": "FSR 4 unavailable, using EASU",
+  "app.warn.smoothUnavailable": "Smooth mode unavailable. See the log file for details.",
+
+  "app.fatal.window": "Could not open the window: {error}",
+  "app.fatal.gpu": "Could not start the graphics card (D3D12): {error}",
+  "app.fatal.swapChain": "Could not create the presentation surface: {error}",
+  "app.fatal.ui": "Could not load the interface: {error}",
+  "app.fatal.deviceRemoved": "The graphics card was reset by Windows. Open Fluvi again."
 }

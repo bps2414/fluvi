@@ -23,6 +23,7 @@
 
 #include "App.h"
 #include "fluvi/audio/OpusPlayer.h"
+#include "fluvi/common/I18n.h"
 #include "fluvi/common/Stats.h"
 #include "fluvi/media/SessionVideo.h"
 #include "PadNav.h"
@@ -83,14 +84,29 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
     app::LoadedSettings loaded = app::LoadSettings(settingsFile);
     AppSettings settings = loaded.settings;
 
+    // Language first: every message after this (fatal boxes included) comes from assets/i18n.
+    const std::filesystem::path assetsDir = FindAssets();
+    const std::filesystem::path i18nDir = assetsDir.parent_path() / "i18n";
+    const auto loadLanguage = [&](const std::string& setting) {
+        Status ls;
+        const std::string language = i18n::ResolveLanguage(setting, i18nDir);
+        if (!i18n::Load(i18nDir, language, ls)) {
+            FLUVI_ERROR("app", "language files ({}): {}", language, ls.message);
+            return false;
+        }
+        FLUVI_INFO("app", "language {}", language);
+        return true;
+    };
+    loadLanguage(settings.language);
+
     app::Window window;
     window.SetFullscreenKey(settings.hotkeys.toggleFullscreen);
     std::string error;
-    if (!window.Start(L"Fluvi", 1280, 720, &error)) { Fatal("Não foi possível abrir a janela: " + error); return 1; }
+    if (!window.Start(L"Fluvi", settings.window, &error)) { Fatal(i18n::Tr("app.fatal.window", {{"error", error}})); return 1; }
 
     Status st;
     auto device = gpu::Device::Create({}, st);
-    if (!device) { Fatal("Não foi possível iniciar a placa de vídeo (D3D12): " + st.message); return 1; }
+    if (!device) { Fatal(i18n::Tr("app.fatal.gpu", {{"error", st.message}})); return 1; }
 
     // First run: the quality preset follows the GPU (the user can change it in Configurações; that sets presetDetected too).
     bool saveInitial = !loaded.existed || !loaded.valid;
@@ -104,7 +120,7 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
     gpu::SwapChainDesc sd;
     sd.hwnd = window.hwnd();
     auto swap = gpu::SwapChain::Create(*device, sd, st);
-    if (!swap) { Fatal("Não foi possível criar a tela de apresentação: " + st.message); return 1; }
+    if (!swap) { Fatal(i18n::Tr("app.fatal.swapChain", {{"error", st.message}})); return 1; }
     auto ctx = device->CreateContext(D3D12_COMMAND_LIST_TYPE_DIRECT, sd.bufferCount);
 
     ui::UiInitDesc ud;
@@ -115,9 +131,10 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
     ud.width = swap->Width();
     ud.height = swap->Height();
     ud.framesInFlight = sd.bufferCount;
-    ud.assetsDir = FindAssets();
+    ud.assetsDir = assetsDir;
+    ud.dpiScale = window.DpiScale();
     auto ui = ui::Ui::Create(ud, st);
-    if (!ui) { Fatal("Não foi possível carregar a interface: " + st.message); return 1; }
+    if (!ui) { Fatal(i18n::Tr("app.fatal.ui", {{"error", st.message}})); return 1; }
     window.SetUi(ui.get());
 
     // ---- stream: decoder, audio, quality chain ----
@@ -195,6 +212,8 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
         liveSession = nullptr;
     };
     hooks.modeChanged = [&](StreamMode m) { mode = m; };
+    hooks.minimize = [&] { window.Minimize(); };
+    hooks.toggleMaximize = [&] { window.ToggleMaximize(); };
     hooks.settingsApplied = [&](const AppSettings& s) {
         std::lock_guard lock(pendingMutex);
         pendingSettings = s;
@@ -216,7 +235,6 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
     std::unique_ptr<gpu::FrameGenerator> fg;
     std::unique_ptr<gpu::Texture> fgOut;
     bool fgFailed = false;
-    std::string fgError;
     bool fgReset = true;
     bool realPending = false;
     int64_t realDueQpc = 0;
@@ -230,6 +248,11 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
     };
     int statsTicks = 0;
     int64_t lastPresentQpc = 0;
+    float uiDpi = window.DpiScale();
+    bool rendered = false;             // a frame was presented: the window stops painting its class background
+    int64_t showPendingQpc = 0;        // since when the stream waits for its first presented picture
+    ui::WindowChromeModel chrome;
+    bool haveChrome = false;
 
     app::PadNav nav;
     const int64_t start = time::NowQpc();
@@ -238,17 +261,36 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
         if (window.TakeFullscreenToggle()) app.ToggleFullscreen();
         if (swap->Fullscreen() != app.DesiredFullscreen()) swap->SetFullscreen(app.DesiredFullscreen());
 
+        // Title bar: shown windowed outside the stream; the UI tells the window what is under the cursor.
+        {
+            ui::WindowChromeModel now;
+            now.visible = !swap->Fullscreen() && ui->CurrentScreen() != ui::Screen::Stream;
+            now.maximized = window.Maximized();
+            now.active = window.Active();
+            if (!haveChrome || now.visible != chrome.visible || now.maximized != chrome.maximized || now.active != chrome.active) {
+                chrome = now;
+                haveChrome = true;
+                ui->SetWindowChrome(chrome);
+            }
+        }
+        if (WindowSettings placement; window.TakePlacement(placement)) app.SaveWindowPlacement(placement);
+
         const app::WindowSize ws = window.Size();
         if (ws.minimized) { Sleep(20); continue; }
-        if (ws.width && ws.height && (ws.width != swap->Width() || ws.height != swap->Height())) {
+        const bool sizeChanged = ws.width && ws.height && (ws.width != swap->Width() || ws.height != swap->Height());
+        if (sizeChanged) {
             device->WaitIdle();
             if (Status rs = swap->Resize(ws.width, ws.height); !rs) FLUVI_WARN("app", "resize: {}", rs.message);
-            ui->Resize(swap->Width(), swap->Height(), 1.0f);
             makeOut();
             haveOutput = false;
             dropFg();                  // recreated at the new size below
             fgReset = true;
             realPending = false;
+        }
+        // Size or monitor DPI changed: the UI recomputes its dp.
+        if (sizeChanged || window.DpiScale() != uiDpi) {
+            uiDpi = window.DpiScale();
+            ui->Resize(swap->Width(), swap->Height(), uiDpi);
         }
 
         // Settings and mode changes from the app (any thread) -> the chain, the gate and the audio, here.
@@ -258,9 +300,14 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
             changed.swap(pendingSettings);
         }
         if (changed) {
+            const bool languageChanged = changed->language != settings.language;
             settings = *changed;
             if (chain) chain->SetConfig(gpu::ResolveChainConfig(settings.video, fsr4Tier));
             if (audioOut) audioOut->SetVolume(settings.audio.volume);
+            if (languageChanged && loadLanguage(settings.language)) {
+                ui->LanguageChanged();
+                app.OnLanguageChanged();
+            }
         }
         gate.SetNewFramesOnly(settings.video.newFramesOnly && mode.load() == StreamMode::Play);
 
@@ -274,10 +321,21 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
         }
         if (nav_.toggleOverlay) app.ToggleOverlayFromPad();
 
+        // Connected but no picture presented yet: the Connecting screen stays up. Give up after 10 s.
+        if (app.StreamShowPending()) {
+            if (!showPendingQpc) showPendingQpc = time::NowQpc();
+            else if (time::ElapsedMs(showPendingQpc, time::NowQpc()) > 10000.0) {
+                app.ReportNoVideo();
+                showPendingQpc = 0;
+            }
+        } else {
+            showPendingQpc = 0;
+        }
+
         // ---- stream picture: the newest decoded frame, if any ----
         const bool streaming = app.Streaming() && decoder && chain && out;
         if (streaming != wasStreaming || streamReset.exchange(false)) {
-            haveOutput = false;
+            if (streaming) haveOutput = false;   // a new stream starts empty; when one ends, the last picture stays for the fade
             shown.reset();
             if (chain) chain->ResetHistory();
             wasStreaming = streaming;
@@ -311,7 +369,6 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
             }
             if (!fg || !fgOut) {
                 fgFailed = true;
-                fgError = fs.message;
                 FLUVI_ERROR("fg", "modo Liso indisponível: {}", fs.message);
                 dropFg();
             }
@@ -361,6 +418,9 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
         if (!swap->WaitForNextFrame(100)) continue;
 
         ui->Update();
+        // Leaving the stream: the last picture stays under the screen change (the veil fades in over it), then video stops.
+        const bool frozen = !streaming && haveOutput && ui->InTransition();
+        if (!streaming && !frozen) haveOutput = false;
         const uint32_t i = swap->CurrentIndex();
         auto* list = ctx->Begin();
         bool processed = false;
@@ -388,12 +448,12 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
                     fgReset = false;
                 } else {
                     fgFailed = true;
-                    fgError = "o FSR FG falhou (ver fluvi.log)";
+                    FLUVI_ERROR("fg", "FSR frame generation failed");
                 }
                 Transition(list, out->View().resource, D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
             }
         }
-        if (streaming && haveOutput) {
+        if ((streaming || frozen) && haveOutput) {
             // The chain's output (same size and format as the back buffer, bars included) becomes the frame; in Liso
             // the in-between frame goes first.
             ID3D12Resource* src = showGenerated ? fgOut->View().resource : out->View().resource;
@@ -420,10 +480,16 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
         const gpu::PresentRequest pr = (processed || presentReal) ? gpu::PresentRequest{0, true} : gpu::PresentRequest{1, false};
         if (Status ps = swap->Present(pr); !ps) {
             FLUVI_ERROR("app", "present: {}", ps.message);
-            if (FAILED(device->CheckRemoved())) { Fatal("A placa de vídeo foi reiniciada pelo Windows. Abra o Fluvi de novo."); rc = 2; }
+            if (FAILED(device->CheckRemoved())) { Fatal(i18n::Tr("app.fatal.deviceRemoved")); rc = 2; }
             break;
         }
         lastPresentQpc = time::NowQpc();
+        if (!rendered) {
+            rendered = true;
+            window.MarkRendered();
+        }
+        // The first picture of a stream is on screen: only now does the Connecting screen give way to the stream.
+        if (processed && app.StreamShowPending()) app.OnFirstFramePresented();
         if (showGenerated) {
             realPending = true;
             realDueQpc = time::NowQpc() + time::MsToQpc(contentMs * 0.5);
@@ -457,8 +523,8 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
                 std::lock_guard lock(sessionMutex);
                 if (liveSession) os.rttMs = liveSession->stats().rttMs;
             }
-            if (os.warning.empty() && !chain->Fsr4Fallback().empty()) os.warning = "FSR 4 indisponível, usando EASU";
-            if (smoothWanted && fgFailed) os.warning = "Liso indisponível: " + fgError;
+            if (os.warning.empty() && !chain->Fsr4Fallback().empty()) os.warning = i18n::Tr("app.warn.fsr4Fallback");
+            if (smoothWanted && fgFailed) os.warning = i18n::Tr("app.warn.smoothUnavailable");
             ui->SetStats(os);
             // Latency in the log every ~5 s (the overlay shows the same): where the time goes, for field tests.
             if (shown && ++statsTicks % 10 == 0) {
@@ -475,6 +541,7 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
     }
 
     // Order: logic and network first (callbacks into the UI stop), then the GPU objects, then the window.
+    app.SaveWindowPlacement(window.Placement());
     app.Shutdown();
     window.SetUi(nullptr);
     device->WaitIdle();

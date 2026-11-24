@@ -9,9 +9,13 @@
 #include <thread>
 #include <windows.h>
 
+#include <nlohmann/json.hpp>
+
 #include "Models.h"
 #include "PadNav.h"
 #include "SettingsStore.h"
+#include "WindowGeometry.h"
+#include "fluvi/common/I18n.h"
 #include "fluvi/xhome/Https.h"
 
 using namespace fluvi;
@@ -19,6 +23,15 @@ using namespace fluvi::app;
 using namespace std::chrono_literals;
 
 namespace {
+
+// The sentences the app produces come from assets/i18n; the tests read them in pt-BR.
+bool LanguageLoaded() {
+    static const bool ok = [] {
+        Status st;
+        return i18n::Load(FLUVI_I18N_DIR, "pt-BR", st);
+    }();
+    return ok;
+}
 
 std::filesystem::path TempDir(const char* name) {
     const auto dir = std::filesystem::path(FLUVI_APP_TEST_TMP) / name;
@@ -60,6 +73,11 @@ AppSettings Customised() {
     s.hotkeys.toggleMode = 0x73;
     s.hotkeys.toggleFullscreen = 0x74;
     s.hotkeys.toggleDebug = 0x75;
+    s.hotkeys.cycleHud = 0x76;
+    s.hud.mode = HudMode::Full;
+    s.hud.corner = HudCorner::BottomRight;
+    s.window = {true, -1500, 40, 1600, 900, true};
+    s.language = "en-US";
     return s;
 }
 
@@ -83,6 +101,16 @@ void CheckSame(const AppSettings& a, const AppSettings& b) {
     CHECK(a.hotkeys.toggleMode == b.hotkeys.toggleMode);
     CHECK(a.hotkeys.toggleFullscreen == b.hotkeys.toggleFullscreen);
     CHECK(a.hotkeys.toggleDebug == b.hotkeys.toggleDebug);
+    CHECK(a.hotkeys.cycleHud == b.hotkeys.cycleHud);
+    CHECK(a.hud.mode == b.hud.mode);
+    CHECK(a.hud.corner == b.hud.corner);
+    CHECK(a.window.hasPlacement == b.window.hasPlacement);
+    CHECK(a.window.x == b.window.x);
+    CHECK(a.window.y == b.window.y);
+    CHECK(a.window.width == b.window.width);
+    CHECK(a.window.height == b.window.height);
+    CHECK(a.window.maximized == b.window.maximized);
+    CHECK(a.language == b.language);
 }
 
 } // namespace
@@ -157,6 +185,45 @@ TEST_CASE("settings: unknown keys are ignored, wrong types and out-of-range valu
     CHECK(s.audio.deviceId.empty());
     CHECK(s.hotkeys.toggleOverlay == d.hotkeys.toggleOverlay);           // 0 is no key
     CHECK(s.hotkeys.toggleMode == 114);
+}
+
+TEST_CASE("settings: a file from before the HUD, window and language settings still loads with their defaults") {
+    const AppSettings d;
+    const AppSettings s = ParseSettings(R"({"version": 1, "video": {"resolution": "1080p"}, "hotkeys": {"toggleMode": 114}})");
+    CHECK(s.video.resolution == StreamResolution::R1080p);
+    CHECK(s.hotkeys.toggleMode == 114);
+    CHECK(s.hotkeys.cycleHud == d.hotkeys.cycleHud);
+    CHECK(s.hud.mode == HudMode::Off);
+    CHECK(s.hud.corner == HudCorner::TopLeft);
+    CHECK_FALSE(s.window.hasPlacement);
+    CHECK(s.language == "auto");
+}
+
+TEST_CASE("settings: HUD, window and language are validated field by field") {
+    const AppSettings d;
+    const AppSettings s = ParseSettings(R"({
+        "hud": { "mode": "huge", "corner": "bottomLeft" },
+        "window": { "x": 10, "y": 20, "width": 50, "height": 900, "maximized": true },
+        "language": "../etc",
+        "hotkeys": { "cycleHud": 300 }
+    })");
+    CHECK(s.hud.mode == d.hud.mode);                        // unknown name
+    CHECK(s.hud.corner == HudCorner::BottomLeft);
+    CHECK_FALSE(s.window.hasPlacement);                     // width below the usable size: no placement at all
+    CHECK_FALSE(s.window.maximized);
+    CHECK(s.language == "auto");                            // not a folder name
+    CHECK(s.hotkeys.cycleHud == d.hotkeys.cycleHud);        // 300 is not a virtual key
+
+    const AppSettings ok = ParseSettings(R"({"window": {"x": -30, "y": 5, "width": 1280, "height": 720}, "language": "pt-BR"})");
+    CHECK(ok.window.hasPlacement);
+    CHECK(ok.window.x == -30);
+    CHECK(ok.window.width == 1280);
+    CHECK_FALSE(ok.window.maximized);
+    CHECK(ok.language == "pt-BR");
+
+    // Without a placement the window key is not written (so a stale one does not come back).
+    const std::string out = SerializeSettings(AppSettings{}, R"({"window": {"x": 1, "y": 2, "width": 800, "height": 600}})");
+    CHECK(out.find("\"window\"") == std::string::npos);
 }
 
 TEST_CASE("settings: keys this build does not know survive a save") {
@@ -339,15 +406,97 @@ TEST_CASE("models: connect stages and error sentences") {
     CHECK(MapStage(StreamStage::Connecting) == ui::ConnectStage::Connecting);
     CHECK(MapStage(StreamStage::Connected) == ui::ConnectStage::Connected);
 
+    REQUIRE(LanguageLoaded());
+    const auto raw = [](const std::string& text) {   // nothing technical reaches the screen
+        for (const char* bad : {"HTTP", "WNS", "Error", "0x", "boom", "XErr", "503", "429"})
+            if (text.find(bad) != std::string::npos) return true;
+        return text.empty() || text.find("app.") == 0;
+    };
     CHECK(DescribeError(xhome::NetworkError("timeout")).find("conexão") != std::string::npos);
-    CHECK(DescribeError(xhome::ServiceError(503, "", "x")).find("503") != std::string::npos);
-    CHECK(DescribeError(xhome::ServiceError(429, "", "x")).find("429") != std::string::npos);
-    CHECK(DescribeError(std::runtime_error("boom")).find("boom") != std::string::npos);
-    CHECK(DescribeSessionFailure("0x87E10BC6", "sem espaço").find("0x87E10BC6") != std::string::npos);
+    for (int status : {401, 404, 429, 500, 503, 418}) CHECK_FALSE(raw(DescribeError(xhome::ServiceError(status, "", "x"))));
+    CHECK_FALSE(raw(DescribeError(std::runtime_error("boom"))));
+    CHECK(DescribeError(xhome::ServiceError(401, R"({"XErr": 2148916233})", "x")).find("perfil Xbox") != std::string::npos);
+    CHECK_FALSE(raw(DescribeSessionFailure("0x87E10BC6", "sem espaço")));
     const std::string wns = DescribeSessionFailure("WNSError", "Xccs : ErrorCallingWNS : Send command failed : State WaitingForServerToRegister");
     CHECK(wns.find("Suspensão") != std::string::npos);
-    CHECK(wns.find("WNS") == std::string::npos);
+    CHECK_FALSE(raw(wns));
+    CHECK(DescribeSessionFailure("", "console Busy").find("outro aparelho") != std::string::npos);
     CHECK(DescribeEnded("connection lost") == "A conexão com o console caiu.");
+    CHECK_FALSE(raw(DescribeEnded("some internal reason")));
     CHECK_FALSE(DescribeSignInFailure(xhome::SignInPoll::Expired, "").empty());
     CHECK(DescribeSignInFailure(xhome::SignInPoll::Pending, "").empty());
+}
+
+// ---- i18n: the app's strings -----------------------------------------------------------------------------------------
+
+TEST_CASE("i18n: app.json has the same keys in pt-BR and en-US, and every one is translated") {
+    const auto keys = [](const char* lang) {
+        std::ifstream in(std::filesystem::path(FLUVI_I18N_DIR) / lang / "app.json");
+        const nlohmann::json j = nlohmann::json::parse(in);
+        std::vector<std::string> out;
+        for (auto it = j.begin(); it != j.end(); ++it) {
+            CHECK(it->is_string());
+            CHECK(it.key().rfind("app.", 0) == 0);
+            out.push_back(it.key());
+        }
+        return out;
+    };
+    const auto pt = keys("pt-BR"), en = keys("en-US");
+    CHECK(pt == en);
+    CHECK(pt.size() > 20);
+}
+
+// ---- window geometry ---------------------------------------------------------------------------------------------------
+
+TEST_CASE("window: the default size is 1600x900 dp times the DPI scale, centered, and limited to the work area") {
+    const MonitorArea fhd100{{0, 0, 1920, 1040}, 96};
+    StartRect r = ComputeStartRect({}, fhd100);
+    CHECK(r.width == 1600);
+    CHECK(r.height == 900);
+    CHECK(r.x == 160);
+    CHECK(r.y == 70);
+    CHECK_FALSE(r.maximized);
+
+    // 125% on a 1080p laptop: 2000x1125 px do not fit in 1920x1032, so the work area limits it.
+    r = ComputeStartRect({}, {{0, 0, 1920, 1032}, 120});
+    CHECK(r.width == 1920);
+    CHECK(r.height == 1032);
+    CHECK(r.x == 0);
+
+    // 4K at 150%: 2400x1350 px.
+    r = ComputeStartRect({}, {{0, 0, 3840, 2080}, 144});
+    CHECK(r.width == 2400);
+    CHECK(r.height == 1350);
+}
+
+TEST_CASE("window: the minimum is 1120x630 dp at the monitor DPI") {
+    CHECK(MinWindowSize(96).cx == 1120);
+    CHECK(MinWindowSize(96).cy == 630);
+    CHECK(MinWindowSize(120).cx == 1400);
+    CHECK(MinWindowSize(144).cy == 945);
+}
+
+TEST_CASE("window: a saved placement is clamped to the work area and the minimum, the maximized flag is kept") {
+    const MonitorArea area{{1920, 0, 3840, 1040}, 96};   // a second monitor to the right
+    WindowSettings saved{true, 1700, 900, 800, 400, true};   // too small, hangs off the left and bottom
+    StartRect r = ComputeStartRect(saved, area);
+    CHECK(r.width == 1120);
+    CHECK(r.height == 630);
+    CHECK(r.x == 1920);                                  // moved onto the monitor
+    CHECK(r.y == 1040 - 630);                            // fully above the bottom edge
+    CHECK(r.maximized);
+
+    saved = {true, 2000, 100, 5000, 3000, false};        // larger than the monitor
+    r = ComputeStartRect(saved, area);
+    CHECK(r.width == 1920);
+    CHECK(r.height == 1040);
+    CHECK(r.x == 1920);
+    CHECK(r.y == 0);
+
+    saved = {true, 2500, 120, 1300, 800, false};         // fits: untouched
+    r = ComputeStartRect(saved, area);
+    CHECK(r.x == 2500);
+    CHECK(r.y == 120);
+    CHECK(r.width == 1300);
+    CHECK(r.height == 800);
 }
